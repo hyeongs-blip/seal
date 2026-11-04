@@ -7,6 +7,10 @@ on:
   schedule:
     - cron: "17 0 * * 6"      # every Saturday 00:17 UTC = 09:17 KST. SoSoValue keeps one month, so a weekly run never misses a day
 
+concurrency:
+  group: studies               # a manual run and the schedule never write to the private repo at the same time
+  cancel-in-progress: false
+
 env:
   GMAIL_ADDRESS: ${{ secrets.GMAIL_USER }}            # same Gmail secrets as the ranker and perp reports
   GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
@@ -81,12 +85,13 @@ jobs:
           if git diff --cached --quiet; then
             echo "No new flow data"
           else
-            git commit -m "ETF flow data $(date -u +%F)"
-            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+            git commit -q -m "ETF flow data $(date -u +%F)"          # -q: no file list in the public log
+            for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done
           fi
       - name: E-mail the report
         run: python -c "$MAIL_PY" - etf_gap_study.html etf_gap_study.xlsx
       - name: E-mail a failure notice
         if: failure()
-        run: python -c "$MAIL_PY" "ETF flow vs price study FAILED" "The run failed. Log $RUN_URL"
+        run: |                  # the log is not public, so the e-mail carries its last lines
+          python -c "$MAIL_PY" "ETF flow vs price study FAILED" "$(printf 'The run failed. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 40 data/etf_last_run.log 2>/dev/null || echo '(no log)')"
 
