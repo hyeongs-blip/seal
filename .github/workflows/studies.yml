@@ -1,4 +1,4 @@
-name: Studies
+name: studies
 
 # Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo (see perp.yml).
 
@@ -68,20 +68,20 @@ jobs:
           COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
-          mkdir -p data
+          mkdir -p data/studies
           set +e
           python etf_gap_study.py \
             --soso-base "${{ vars.SOSO_BASE || 'https://openapi.sosovalue.com/openapi/v1' }}" \
-            --out etf_gap_study.xlsx > data/etf_last_run.log 2>&1
+            --out etf_gap_study.xlsx > data/studies/etf_last_run.log 2>&1
           code=$?
-          echo "etf_gap_study.py finished with exit code $code. Full log: data/etf_last_run.log in the private repo."
+          echo "etf_gap_study.py finished with exit code $code. Full log: data/studies/etf_last_run.log in the private repo."
           exit $code
       - name: Save flow history to the repo
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add data/ 2>/dev/null || true
+          git add -A data/ 2>/dev/null || true                    # -A: also records files moved out of data/ into data/studies/
           if git diff --cached --quiet; then
             echo "No new flow data"
           else
@@ -93,5 +93,5 @@ jobs:
       - name: E-mail a failure notice
         if: failure()
         run: |                  # the log is not public, so the e-mail carries its last lines
-          python -c "$MAIL_PY" "ETF flow vs price study FAILED" "$(printf 'The run failed. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 40 data/etf_last_run.log 2>/dev/null || echo '(no log)')"
+          python -c "$MAIL_PY" "ETF flow vs price study FAILED" "$(printf 'The run failed. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 40 data/studies/etf_last_run.log 2>/dev/null || echo '(no log)')"
 

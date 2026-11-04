@@ -48,11 +48,11 @@ jobs:
       - run: pip install pandas numpy requests openpyxl matplotlib scipy
       - name: Run the ranker (the log is kept in the private repo, not printed here)
         run: |
-          mkdir -p data
+          mkdir -p data/ranker
           set +e
-          python ranker.py > data/ranker_last_run.log 2>&1
+          python ranker.py > data/ranker/ranker_last_run.log 2>&1
           code=$?
-          echo "ranker.py finished with exit code $code. Full log: data/ranker_last_run.log in the private repo."
+          echo "ranker.py finished with exit code $code. Full log: data/ranker/ranker_last_run.log in the private repo."
           exit $code
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
