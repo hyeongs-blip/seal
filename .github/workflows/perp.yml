@@ -1,4 +1,4 @@
-name: Perp
+name: perp
 
 # This file lives in the PUBLIC repo (free Actions minutes). The code, data and keys stay in the PRIVATE repo:
 # the job checks the private repo out with a token, runs the report there and pushes the saved data back to it.
