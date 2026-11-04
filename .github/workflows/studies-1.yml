@@ -1,0 +1,97 @@
+name: Studies
+
+# Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo (see perp.yml).
+
+on:
+  workflow_dispatch:          # "Run workflow" button in the Actions tab
+  schedule:
+    - cron: "17 0 * * 6"      # every Saturday 00:17 UTC = 09:17 KST. SoSoValue keeps one month, so a weekly run never misses a day
+
+concurrency:
+  group: studies               # a manual run and the schedule never write to the private repo at the same time
+  cancel-in-progress: false
+
+env:
+  GMAIL_ADDRESS: ${{ secrets.GMAIL_USER }}            # same Gmail secrets as the ranker and perp reports
+  GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+  MAIL_TO: ${{ secrets.MAIL_TO }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  # Gmail sender, run as: python -c "$MAIL_PY" SUBJECT HTML_OR_TEXT [ATTACHMENT...]
+  # The subject "-" takes the <title> of the HTML file. The second argument is an .html file, or plain text.
+  MAIL_PY: |
+    import os, re, sys, smtplib, ssl
+    from email.message import EmailMessage
+    subject, body, files = sys.argv[1], sys.argv[2], sys.argv[3:]
+    user = os.environ["GMAIL_ADDRESS"].strip()
+    pw = os.environ["GMAIL_APP_PASSWORD"].replace(" ", "")
+    if not user or not pw:
+        sys.exit("The GMAIL_USER / GMAIL_APP_PASSWORD secrets are empty in this repo")
+    to = [x.strip() for x in os.environ.get("MAIL_TO", "").split(",") if x.strip()] or [user]
+    is_html = body.endswith(".html") and os.path.exists(body)
+    html = open(body, encoding="utf-8").read() if is_html else None
+    if subject == "-":
+        m = re.search(r"<title>(.*?)</title>", html or "", re.S)
+        subject = m.group(1).strip() if m else "Report"
+    msg = EmailMessage()
+    msg["Subject"], msg["From"], msg["To"] = subject, user, ", ".join(to)
+    msg.set_content("See the HTML version of this message." if is_html else body)
+    if html:
+        msg.add_alternative(html, subtype="html")
+    for f in files:
+        with open(f, "rb") as fh:
+            msg.add_attachment(fh.read(), maintype="application", subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                               filename=os.path.basename(f))
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context(), timeout=60) as s:
+        s.login(user, pw)
+        s.send_message(msg)
+    print("Sent:", subject)
+
+jobs:
+  etf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read          # this repo is only read; the private repo is written with the PRIVATE_PAT token
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests openpyxl
+      - name: ETF flow vs price study (the log is kept in the private repo, not printed here)
+        env:
+          SOSO_API_KEY: ${{ secrets.SOSO_API_KEY }}
+          HYPERTRACKER_TOKEN: ${{ secrets.HYPERTRACKER_TOKEN }}
+          COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          mkdir -p data
+          set +e
+          python etf_gap_study.py \
+            --soso-base "${{ vars.SOSO_BASE || 'https://openapi.sosovalue.com/openapi/v1' }}" \
+            --out etf_gap_study.xlsx > data/etf_last_run.log 2>&1
+          code=$?
+          echo "etf_gap_study.py finished with exit code $code. Full log: data/etf_last_run.log in the private repo."
+          exit $code
+      - name: Save flow history to the repo
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/ 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No new flow data"
+          else
+            git commit -q -m "ETF flow data $(date -u +%F)"          # -q: no file list in the public log
+            for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done
+          fi
+      - name: E-mail the report
+        run: python -c "$MAIL_PY" - etf_gap_study.html etf_gap_study.xlsx
+      - name: E-mail a failure notice
+        if: failure()
+        run: |                  # the log is not public, so the e-mail carries its last lines
+          python -c "$MAIL_PY" "ETF flow vs price study FAILED" "$(printf 'The run failed. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 40 data/etf_last_run.log 2>/dev/null || echo '(no log)')"
+
