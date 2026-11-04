@@ -22,7 +22,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for f in perp.yml intraday.yml keepalive.yml; do
+          for f in perp.yml intraday.yml ranker.yml studies.yml keepalive.yml; do
             gh api -X PUT "repos/${{ github.repository }}/actions/workflows/$f/enable" || true
           done
       - name: Commit a timestamp

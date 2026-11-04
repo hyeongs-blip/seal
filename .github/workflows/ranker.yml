@@ -1,0 +1,77 @@
+name: ranker
+
+# Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo (see perp.yml).
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # once a day, 00:00 UTC = 09:00 Seoul
+  workflow_dispatch:       # "Run workflow" button = on demand, with a small form for the benchmark and the IGNORE test
+    inputs:
+      bench_mode:
+        description: "Benchmark for beta / residuals / score (default = majors)"
+        type: choice
+        default: default
+        options: [default, majors, sol]
+      corr_test:
+        description: "IGNORE test: which correlation decides (default = the value saved in ranker.py)"
+        type: choice
+        default: default
+        options: [default, majors, sol]
+      min_corr_sol:
+        description: "SOL r cutoff, e.g. 0.35 (empty = default)"
+        type: string
+        default: ""
+      min_corr_maj:
+        description: "Majors cutoff, e.g. 0.35 (empty = default)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read           # this repo is only read; the private repo is written with the PRIVATE_PAT token
+
+concurrency:
+  group: ranker
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy requests openpyxl matplotlib scipy
+      - name: Run the ranker (the log is kept in the private repo, not printed here)
+        run: |
+          mkdir -p data
+          set +e
+          python ranker.py > data/ranker_last_run.log 2>&1
+          code=$?
+          echo "ranker.py finished with exit code $code. Full log: data/ranker_last_run.log in the private repo."
+          exit $code
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          BENCH_MODE: ${{ inputs.bench_mode }}
+          CORR_TEST: ${{ inputs.corr_test }}
+          MIN_CORR_SOL: ${{ inputs.min_corr_sol }}
+          MIN_CORR_MAJ: ${{ inputs.min_corr_maj }}
+      - name: Save state
+        if: always()
+        run: |
+          git config user.name "ranking-bot"
+          git config user.email "ranking-bot@users.noreply.github.com"
+          git add -A data || true
+          git add -u state.json || true
+          git add -u data/state.json || true
+          git add -u data/ranker-state.json || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Update state"
+            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+          fi
