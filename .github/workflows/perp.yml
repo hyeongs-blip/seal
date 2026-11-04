@@ -57,6 +57,8 @@ jobs:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FULL_SCAN: ${{ github.event.inputs.full_scan == 'true' && '1' || '' }}
           WATCH_ONLY: ${{ github.event.inputs.watch_only == 'true' && '1' || '' }}
           BENCH: ${{ github.event.inputs.bench || vars.BENCH || 'SOL' }}
