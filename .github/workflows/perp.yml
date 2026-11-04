@@ -1,1 +1,72 @@
+name: perp-report
 
+# This file lives in the PUBLIC repo (free Actions minutes). The code, data and keys stay in the PRIVATE repo:
+# the job checks the private repo out with a token, runs the report there and pushes the saved data back to it.
+
+on:
+  schedule:
+    - cron: "30 0 * * *"   # once a day, 00:30 UTC = 09:30 Seoul
+  workflow_dispatch:       # "Run workflow" button = on demand
+    inputs:
+      watch_only:
+        description: "Quick run: only the Watch sheet (no Post-surge, Cross-busters, Crowd, Primed; saves nothing to history). Use before bidding."
+        type: boolean
+        default: false
+      full_scan:
+        description: "Scan all 150 exchanges now (uses about 220 credits instead of about 120)"
+        type: boolean
+        default: false
+      bench:
+        description: "Benchmark for the correlation filter and colours: SOL or T8 (empty = the repository variable BENCH, else SOL)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read           # this repo is only read; the private repo is written with the PRIVATE_PAT token
+
+concurrency:
+  group: perp-report       # never two runs at once (they would double the credits and clash on the state files)
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}     # for example  yourname/perp-private  (a secret, so the name is hidden in the public logs)
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests openpyxl
+      - name: Run the report (the log is kept in the private repo, not printed here)
+        run: |
+          mkdir -p data/perp
+          set +e
+          python perp_report.py > data/perp/last_run.log 2>&1
+          code=$?
+          echo "perp_report.py finished with exit code $code. Full log: data/perp/last_run.log in the private repo."
+          exit $code
+        env:
+          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+          CMC_API_KEY_2: ${{ secrets.CMC_API_KEY_2 }}
+          COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          FULL_SCAN: ${{ github.event.inputs.full_scan == 'true' && '1' || '' }}
+          WATCH_ONLY: ${{ github.event.inputs.watch_only == 'true' && '1' || '' }}
+          BENCH: ${{ github.event.inputs.bench || vars.BENCH || 'SOL' }}
+      - name: Save state
+        if: always()
+        run: |
+          git config user.name "perp-bot"
+          git config user.email "perp-bot@users.noreply.github.com"
+          git add -f -A data/perp
+          git rm -r -q --cached --ignore-unmatch perp_state.json history || true   # the one-time move from the repo root (no effect once they are gone)
+          if ! git diff --cached --quiet; then
+            git commit -m "Update perp state and history"
+            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+          fi

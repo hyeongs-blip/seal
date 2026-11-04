@@ -1,0 +1,50 @@
+name: perp-intraday
+
+# Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo (see perp.yml).
+
+on:
+  schedule:
+    - cron: "7 * * * *"    # every hour at :07 (GitHub may start it a few minutes late)
+  workflow_dispatch:       # "Run workflow" button = on demand
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perp-intraday     # never two polls at once
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests openpyxl
+      - name: Poll (the log is only kept when something fails)
+        run: |
+          set +e
+          python intraday_poll.py > "$RUNNER_TEMP/poll.log" 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then mkdir -p data/perp; cp "$RUNNER_TEMP/poll.log" data/perp/intraday_last_error.log; fi
+          echo "intraday_poll.py finished with exit code $code."
+          exit $code
+        env:
+          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+          CMC_API_KEY_2: ${{ secrets.CMC_API_KEY_2 }}
+      - name: Save snapshots
+        if: always()
+        run: |
+          git config user.name "perp-bot"
+          git config user.email "perp-bot@users.noreply.github.com"
+          git add -f -A data/perp/intraday data/perp/intraday_last_error.log 2>/dev/null || git add -f -A data/perp/intraday
+          if ! git diff --cached --quiet; then
+            git commit -m "Hourly perp snapshot"
+            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+          fi
