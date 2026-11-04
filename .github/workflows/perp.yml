@@ -1,4 +1,4 @@
-name: perp-report
+name: Perp
 
 # This file lives in the PUBLIC repo (free Actions minutes). The code, data and keys stay in the PRIVATE repo:
 # the job checks the private repo out with a token, runs the report there and pushes the saved data back to it.
@@ -25,7 +25,7 @@ permissions:
   contents: read           # this repo is only read; the private repo is written with the PRIVATE_PAT token
 
 concurrency:
-  group: perp-report       # never two runs at once (they would double the credits and clash on the state files)
+  group: perp       # never two runs at once (they would double the credits and clash on the state files)
   cancel-in-progress: false
 
 jobs:
@@ -37,6 +37,7 @@ jobs:
         with:
           repository: ${{ secrets.PRIVATE_REPO }}     # for example  yourname/perp-private  (a secret, so the name is hidden in the public logs)
           token: ${{ secrets.PRIVATE_PAT }}
+          fetch-depth: 0                               # full git history: lets the report recover days of history that were lost in the move to data/perp
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -45,9 +46,9 @@ jobs:
         run: |
           mkdir -p data/perp
           set +e
-          python perp_report.py > data/perp/last_run.log 2>&1
+          python perp.py > data/perp/last_run.log 2>&1
           code=$?
-          echo "perp_report.py finished with exit code $code. Full log: data/perp/last_run.log in the private repo."
+          echo "perp.py finished with exit code $code. Full log: data/perp/last_run.log in the private repo."
           exit $code
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
