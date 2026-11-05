@@ -55,9 +55,8 @@ jobs:
           echo "ranker.py finished with exit code $code. Full log: data/ranker/ranker_last_run.log in the private repo."
           exit $code
         env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          MAIL_TO: ${{ secrets.MAIL_TO }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           BENCH_MODE: ${{ inputs.bench_mode }}
           CORR_TEST: ${{ inputs.corr_test }}
           MIN_CORR_SOL: ${{ inputs.min_corr_sol }}
