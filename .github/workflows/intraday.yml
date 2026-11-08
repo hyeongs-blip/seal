@@ -38,12 +38,17 @@ jobs:
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
           CMC_API_KEY_2: ${{ secrets.CMC_API_KEY_2 }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}              # reads your positions chat (positions_chat.py)
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_POSITIONS_CHAT: ${{ secrets.TELEGRAM_POSITIONS_CHAT }}    # optional: id of the positions chat (empty = any chat except the report chat)
+          TELEGRAM_OWNER_ID: ${{ secrets.TELEGRAM_OWNER_ID }}                # optional: your Telegram user id (empty = TELEGRAM_CHAT_ID when it is a private chat)
       - name: Save snapshots
         if: always()
         run: |
           git config user.name "perp-bot"
           git config user.email "perp-bot@users.noreply.github.com"
           git add -f -A data/perp/intraday data/perp/intraday_last_error.log 2>/dev/null || git add -f -A data/perp/intraday
+          git add -f data/perp/my_positions.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Hourly perp snapshot"
             for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
