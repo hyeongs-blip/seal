@@ -1,6 +1,6 @@
 name: positions
 
-# Hourly: positions of the Great/Good-rated copy-trading hosts on their coins (Telegram only when something changes, plus a
+# Hourly: positions of the Great/Good-rated copy-trading hosts (and the ones you send the bot) on their coins (Telegram only when something changes, plus a
 # daily digest around 09:00 KST). Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo.
 
 on:
@@ -78,6 +78,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git add -A data/hosts/positions 2>/dev/null || true
+          git add data/hosts/watch.txt 2>/dev/null || true      # hosts you added or stopped from Telegram
           if git diff --cached --quiet; then
             echo "Nothing new"
           else
