@@ -53,6 +53,9 @@ jobs:
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
           CMC_API_KEY_2: ${{ secrets.CMC_API_KEY_2 }}
+          CMC_API_KEY_3: ${{ secrets.CMC_API_KEY_3 }}
+          CMC_API_KEY_4: ${{ secrets.CMC_API_KEY_4 }}
+          CMC_API_KEY_5: ${{ secrets.CMC_API_KEY_5 }}
           COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
