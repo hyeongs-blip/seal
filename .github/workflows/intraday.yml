@@ -41,6 +41,11 @@ jobs:
           CMC_API_KEY_3: ${{ secrets.CMC_API_KEY_3 }}
           CMC_API_KEY_4: ${{ secrets.CMC_API_KEY_4 }}
           CMC_API_KEY_5: ${{ secrets.CMC_API_KEY_5 }}
+          CMC_API_KEY_6: ${{ secrets.CMC_API_KEY_6 }}
+          CMC_API_KEY_7: ${{ secrets.CMC_API_KEY_7 }}
+          CMC_API_KEY_8: ${{ secrets.CMC_API_KEY_8 }}
+          CMC_API_KEY_9: ${{ secrets.CMC_API_KEY_9 }}
+          CMC_API_KEY_10: ${{ secrets.CMC_API_KEY_10 }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}              # reads your positions chat (positions_chat.py)
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_POSITIONS_BOT_TOKEN: ${{ secrets.TELEGRAM_POSITIONS_BOT_TOKEN }}    # optional: a second bot just for the positions chat (empty = TELEGRAM_BOT_TOKEN)
