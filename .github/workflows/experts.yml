@@ -7,7 +7,7 @@ on:
     inputs:
       coins:
         description: "Coins, comma separated"
-        default: "WLD"
+        default: "WLD,XPL,SUI,DOGE,HYPE"
       scan:
         description: "Scan all hosts first (about 1.5 hours); no = re-test on the last scan's data"
         default: "yes"
@@ -58,7 +58,7 @@ env:
 jobs:
   experts:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 330
     permissions:
       contents: read          # this repo is only read; the private repo is written with the PRIVATE_PAT token
     steps:
@@ -73,7 +73,7 @@ jobs:
       - name: Scan (the log is kept in the private repo, not printed here)
         if: github.event.inputs.scan != 'no'
         env:
-          COINS: ${{ github.event.inputs.coins || 'WLD' }}
+          COINS: ${{ github.event.inputs.coins || 'WLD,XPL,SUI,DOGE,HYPE' }}
         run: |
           mkdir -p data/experts
           set +e
@@ -83,7 +83,7 @@ jobs:
           exit $code
       - name: Back-test the hivemind and build the live model
         env:
-          COINS: ${{ github.event.inputs.coins || 'WLD' }}
+          COINS: ${{ github.event.inputs.coins || 'WLD,XPL,SUI,DOGE,HYPE' }}
         run: |
           set +e
           python hivemind.py "$COINS" > data/experts/hivemind_last.log 2>&1
