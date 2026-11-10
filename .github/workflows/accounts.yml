@@ -1,0 +1,89 @@
+name: accounts
+
+# Account experts (run by hand): every copy-trading host Binance lists, rated on all coins except BTC/ETH/SOL; transfer test and coin screen. Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo.
+
+on:
+  workflow_dispatch:          # "Run workflow" button in the Actions tab
+
+concurrency:
+  group: accounts
+  cancel-in-progress: false
+
+env:
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  TG_PY: |
+    import json, os, sys, uuid, urllib.error, urllib.parse, urllib.request
+    tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip(), os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not tok or not chat:
+        sys.exit("The TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secrets are empty in this repo")
+    text, files = sys.argv[1], [f for f in sys.argv[2:] if os.path.exists(f)]
+    if text.endswith(".txt") and os.path.exists(text):
+        text = open(text, encoding="utf-8").read()
+    def call(method, fields, path=None):
+        if path is None:
+            req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/{method}", data=urllib.parse.urlencode(fields).encode())
+        else:
+            b = uuid.uuid4().hex
+            body = b"".join(f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode() for k, v in fields.items())
+            body += (f'--{b}\r\nContent-Disposition: form-data; name="document"; filename="{os.path.basename(path)}"\r\n'
+                     f'Content-Type: application/octet-stream\r\n\r\n').encode() + open(path, "rb").read() + f"\r\n--{b}--\r\n".encode()
+            req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/{method}", data=body,
+                                         headers={"Content-Type": f"multipart/form-data; boundary={b}"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:            # never print the URL: it contains the bot token
+            sys.exit(f"Telegram refused {method}: HTTP {e.code} {e.read()[:200]!r}")
+    if files and len(text) <= 1000:                    # short text rides along as the file's caption
+        call("sendDocument", {"chat_id": chat, "caption": text}, files[0])
+        files = files[1:]
+    else:
+        for i in range(0, min(len(text), 12000), 4000):
+            call("sendMessage", {"chat_id": chat, "text": text[i:i + 4000], "disable_web_page_preview": "true"})
+    for f in files:
+        call("sendDocument", {"chat_id": chat}, f)
+    print("Sent to Telegram:", len(text), "characters,", len(sys.argv[2:]), "file(s)")
+
+jobs:
+  accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    permissions:
+      contents: read          # this repo is only read; the private repo is written with the PRIVATE_PAT token
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests openpyxl
+      - name: Rate the hosts (the log is kept in the private repo, not printed here)
+        run: |
+          mkdir -p data/accounts
+          set +e
+          python account_experts.py > data/accounts/last_run.log 2>&1
+          code=$?
+          echo "account_experts.py finished with exit code $code"
+          exit $code
+      - name: Save the ratings, trades and coin screen to the repo (the spreadsheet is only sent, not kept)
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -A data/accounts 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Nothing new"
+          else
+            git commit -q -m "account experts $(date -u +%F)"
+            for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done
+          fi
+      - name: Send to Telegram
+        run: python -c "$TG_PY" account_experts.txt account_experts.xlsx
+      - name: Send a failure notice to Telegram
+        if: failure()
+        run: |
+          python -c "$TG_PY" "$(printf 'account experts FAILED. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/accounts/last_run.log 2>/dev/null || echo '(no log)')"
