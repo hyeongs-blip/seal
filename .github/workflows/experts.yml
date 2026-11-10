@@ -8,6 +8,11 @@ on:
       coins:
         description: "Coins, comma separated"
         default: "WLD"
+      scan:
+        description: "Scan all hosts first (about 1.5 hours); no = re-test on the last scan's data"
+        default: "yes"
+  schedule:
+    - cron: "17 18 * * 0"     # Sunday 18:17 UTC = Monday 03:17 KST: weekly fresh scan and back-test
 
 concurrency:
   group: experts
@@ -66,6 +71,7 @@ jobs:
           python-version: "3.12"
       - run: pip install requests openpyxl
       - name: Scan (the log is kept in the private repo, not printed here)
+        if: github.event.inputs.scan != 'no'
         env:
           COINS: ${{ github.event.inputs.coins || 'WLD' }}
         run: |
@@ -75,7 +81,16 @@ jobs:
           code=$?
           echo "coin_experts.py finished with exit code $code"
           exit $code
-      - name: Save the trades to the repo (the spreadsheet is only sent, not kept)
+      - name: Back-test the hivemind and build the live model
+        env:
+          COINS: ${{ github.event.inputs.coins || 'WLD' }}
+        run: |
+          set +e
+          python hivemind.py "$COINS" > data/experts/hivemind_last.log 2>&1
+          code=$?
+          echo "hivemind.py finished with exit code $code"
+          exit $code
+      - name: Save the trades and models to the repo (the spreadsheets are only sent, not kept)
         if: always()
         run: |
           git config user.name "github-actions[bot]"
@@ -88,8 +103,10 @@ jobs:
             for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done
           fi
       - name: Send to Telegram
-        run: python -c "$TG_PY" coin_experts.txt coin_experts.xlsx
+        run: |
+          if [ -f coin_experts.txt ]; then python -c "$TG_PY" coin_experts.txt coin_experts.xlsx; fi
+          python -c "$TG_PY" hivemind.txt hivemind.xlsx
       - name: Send a failure notice to Telegram
         if: failure()
         run: |
-          python -c "$TG_PY" "$(printf 'experts scan FAILED. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/experts/last_run.log 2>/dev/null || echo '(no log)')"
+          python -c "$TG_PY" "$(printf 'experts scan FAILED. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/experts/hivemind_last.log data/experts/last_run.log 2>/dev/null || echo '(no log)')"
