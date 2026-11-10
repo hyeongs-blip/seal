@@ -7,7 +7,7 @@ on:
     inputs:
       coins:
         description: "Coins, comma separated"
-        default: "WLD,XPL,SUI,DOGE,HYPE"
+        default: "WLD,ETH,ZEC,PEPE,BNB,ETHFI"
       scan:
         description: "Scan all hosts first (about 1.5 hours); no = re-test on the last scan's data"
         default: "yes"
@@ -73,7 +73,7 @@ jobs:
       - name: Scan (the log is kept in the private repo, not printed here)
         if: github.event.inputs.scan != 'no'
         env:
-          COINS: ${{ github.event.inputs.coins || 'WLD,XPL,SUI,DOGE,HYPE' }}
+          COINS: ${{ github.event.inputs.coins || 'WLD,ETH,ZEC,PEPE,BNB,ETHFI' }}
         run: |
           mkdir -p data/experts
           set +e
@@ -83,7 +83,7 @@ jobs:
           exit $code
       - name: Back-test the hivemind and build the live model
         env:
-          COINS: ${{ github.event.inputs.coins || 'WLD,XPL,SUI,DOGE,HYPE' }}
+          COINS: ${{ github.event.inputs.coins || 'WLD,ETH,ZEC,PEPE,BNB,ETHFI' }}
         run: |
           set +e
           python hivemind.py "$COINS" > data/experts/hivemind_last.log 2>&1
