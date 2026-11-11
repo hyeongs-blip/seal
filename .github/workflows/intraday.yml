@@ -4,7 +4,8 @@ name: perp-intraday
 
 on:
   schedule:
-    - cron: "7 * * * *"    # every hour at :07 (GitHub may start it a few minutes late)
+    - cron: "7 * * * *"    # every hour at :07 (GitHub often starts it late or drops it)
+    - cron: "37 * * * *"   # a second chance half an hour later: intraday_poll.py skips it when a poll already ran in the last 40 minutes
   workflow_dispatch:       # "Run workflow" button = on demand
 
 permissions:
@@ -53,6 +54,7 @@ jobs:
           TELEGRAM_POSITIONS_BOT_TOKEN: ${{ secrets.TELEGRAM_POSITIONS_BOT_TOKEN }}    # optional: a second bot just for the positions chat (empty = TELEGRAM_BOT_TOKEN)
           TELEGRAM_POSITIONS_CHAT: ${{ secrets.TELEGRAM_POSITIONS_CHAT }}    # optional: id of the positions chat (empty = any chat except the report chat)
           TELEGRAM_OWNER_ID: ${{ secrets.TELEGRAM_OWNER_ID }}                # optional: your Telegram user id (empty = TELEGRAM_CHAT_ID when it is a private chat)
+          INTRADAY_FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}      # a manual run always polls
           INTRADAY_ALERTS: drivers      # Telegram message when the flag of an exchange driving one of your coins changes: drivers | all (every flagged exchange of your coins) | off
       - name: Save snapshots
         if: always()
