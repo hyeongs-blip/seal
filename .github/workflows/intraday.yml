@@ -51,6 +51,7 @@ jobs:
           TELEGRAM_POSITIONS_BOT_TOKEN: ${{ secrets.TELEGRAM_POSITIONS_BOT_TOKEN }}    # optional: a second bot just for the positions chat (empty = TELEGRAM_BOT_TOKEN)
           TELEGRAM_POSITIONS_CHAT: ${{ secrets.TELEGRAM_POSITIONS_CHAT }}    # optional: id of the positions chat (empty = any chat except the report chat)
           TELEGRAM_OWNER_ID: ${{ secrets.TELEGRAM_OWNER_ID }}                # optional: your Telegram user id (empty = TELEGRAM_CHAT_ID when it is a private chat)
+          INTRADAY_ALERTS: drivers      # Telegram message when the flag of an exchange driving one of your coins changes: drivers | all (every flagged exchange of your coins) | off
       - name: Save snapshots
         if: always()
         run: |
@@ -58,6 +59,7 @@ jobs:
           git config user.email "perp-bot@users.noreply.github.com"
           git add -f -A data/perp/intraday data/perp/intraday_last_error.log 2>/dev/null || git add -f -A data/perp/intraday
           git add -f data/perp/my_positions.json 2>/dev/null || true
+          git add -f data/perp/intraday_alerts.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Hourly perp snapshot"
             for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
