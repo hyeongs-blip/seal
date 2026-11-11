@@ -34,6 +34,8 @@ jobs:
           code=$?
           if [ $code -ne 0 ]; then mkdir -p data/perp; cp "$RUNNER_TEMP/poll.log" data/perp/intraday_last_error.log; fi
           echo "intraday_poll.py finished with exit code $code."
+          # the log of this repo is public: only the lines about exchanges, credits and alerts are shown here, never the positions chat line
+          grep -E "pairs, |^Done|^Skipped|^No watch|^Watch list|^Alerts|^Notes|stopped" "$RUNNER_TEMP/poll.log" | cut -c1-300 || true
           exit $code
         env:
           CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
