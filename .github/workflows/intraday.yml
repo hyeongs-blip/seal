@@ -60,8 +60,6 @@ jobs:
           TELEGRAM_POSITIONS_CHAT: ${{ secrets.TELEGRAM_POSITIONS_CHAT }}    # optional: id of the positions chat (empty = any chat except the report chat)
           TELEGRAM_OWNER_ID: ${{ secrets.TELEGRAM_OWNER_ID }}                # optional: your Telegram user id (empty = TELEGRAM_CHAT_ID when it is a private chat)
           INTRADAY_FORCE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source != 'phone' && '1' || '' }}      # a manual run always polls; the phone trigger keeps the one-poll-per-hour rule
-          INTRADAY_SOURCE: ${{ github.event.schedule || github.event.inputs.source }}      # who started the run: the cron expression, 'phone' or empty (a manual run)
-          INTRADAY_STATUS: "1"          # one Telegram line per run (polled / skipped / failed) while you check the schedules; set it to "" to switch it off
           INTRADAY_ALERTS: drivers      # Telegram message when the flag of an exchange driving one of your coins changes: drivers | all (every flagged exchange of your coins) | off
       - name: Save snapshots
         if: always()
