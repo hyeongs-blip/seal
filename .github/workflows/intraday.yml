@@ -5,11 +5,11 @@ name: perp-intraday
 on:
   schedule:
     - cron: "7 * * * *"    # fallback: every hour at :07 (GitHub often starts it late or drops it)
-    - cron: "37 * * * *"   # fallback: a second chance half an hour later. intraday_poll.py skips a run when a poll already ran in the last 50 minutes
+    - cron: "37 * * * *"   # fallback: a second chance half an hour later. intraday_poll.py skips a run when a poll already ran in the same clock hour (or under 20 minutes ago)
   workflow_dispatch:       # "Run workflow" button = on demand; the phone (Termux, every hour at :02) starts it with source=phone
     inputs:
       source:
-        description: "phone = started by the Termux hourly trigger (the 50-minute rule applies); empty = a manual run, which always polls"
+        description: "phone = started by the Termux hourly trigger (the one-poll-per-hour rule applies); empty = a manual run, which always polls"
         required: false
         default: ""
 
@@ -59,7 +59,7 @@ jobs:
           TELEGRAM_POSITIONS_BOT_TOKEN: ${{ secrets.TELEGRAM_POSITIONS_BOT_TOKEN }}    # optional: a second bot just for the positions chat (empty = TELEGRAM_BOT_TOKEN)
           TELEGRAM_POSITIONS_CHAT: ${{ secrets.TELEGRAM_POSITIONS_CHAT }}    # optional: id of the positions chat (empty = any chat except the report chat)
           TELEGRAM_OWNER_ID: ${{ secrets.TELEGRAM_OWNER_ID }}                # optional: your Telegram user id (empty = TELEGRAM_CHAT_ID when it is a private chat)
-          INTRADAY_FORCE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source != 'phone' && '1' || '' }}      # a manual run always polls; the phone trigger keeps the 50-minute rule
+          INTRADAY_FORCE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source != 'phone' && '1' || '' }}      # a manual run always polls; the phone trigger keeps the one-poll-per-hour rule
           INTRADAY_ALERTS: drivers      # Telegram message when the flag of an exchange driving one of your coins changes: drivers | all (every flagged exchange of your coins) | off
       - name: Save snapshots
         if: always()
