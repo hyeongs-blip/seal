@@ -25,6 +25,10 @@ on:
         description: "Majors cutoff, e.g. 0.35 (empty = default)"
         type: string
         default: ""
+      list_size:
+        description: "Coins per side in the LONG / SHORT lists, e.g. 30 (empty = 20). The bot sends this when POOL_SIZE is set in its .env"
+        type: string
+        default: ""
       pool_only:
         description: "Trading-bot mode: only write the LONG/SHORT lists (data/ranker/pool.json); no Excel, no Telegram, history untouched"
         type: boolean
@@ -68,6 +72,7 @@ jobs:
           MIN_CORR_SOL: ${{ inputs.min_corr_sol }}
           MIN_CORR_MAJ: ${{ inputs.min_corr_maj }}
           POOL_ONLY: ${{ inputs.pool_only }}
+          LIST_SIZE: ${{ inputs.list_size }}
       - name: Save state
         if: always()
         run: |
