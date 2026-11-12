@@ -16,10 +16,6 @@ on:
         description: "Scan all 150 exchanges now (uses about 220 credits instead of about 120)"
         type: boolean
         default: false
-      bench:
-        description: "Benchmark for the correlation filter and colours: SOL or T8 (empty = the repository variable BENCH, else SOL)"
-        type: string
-        default: ""
 
 permissions:
   contents: read           # this repo is only read; the private repo is written with the PRIVATE_PAT token
@@ -69,7 +65,6 @@ jobs:
           TELEGRAM_OWNER_ID: ${{ secrets.TELEGRAM_OWNER_ID }}
           FULL_SCAN: ${{ github.event.inputs.full_scan == 'true' && '1' || '' }}
           WATCH_ONLY: ${{ github.event.inputs.watch_only == 'true' && '1' || '' }}
-          BENCH: ${{ github.event.inputs.bench || vars.BENCH || 'SOL' }}
       - name: Save state
         if: always()
         run: |
