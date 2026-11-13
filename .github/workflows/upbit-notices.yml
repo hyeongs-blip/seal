@@ -1,0 +1,41 @@
+name: upbit-notices
+# Upbit refuses GitHub's servers (HTTP 403), so the phone (in Korea) reads Upbit's trade notices and sends the delisting ones here.
+# This workflow only stores them in data/upbit_delist.json; the daily perp report reads that file from the public repo.
+# Started by the phone script (run_intraday.sh) through the same token as the intraday trigger.
+on:
+  workflow_dispatch:
+    inputs:
+      data:
+        description: "JSON from the phone: {updated, notices:[{title, listed_at}]}"
+        required: true
+permissions:
+  contents: write
+concurrency:
+  group: upbit-notices
+  cancel-in-progress: false
+jobs:
+  store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Store
+        env:
+          DATA: ${{ inputs.data }}
+        run: |
+          mkdir -p data
+          printf '%s' "$DATA" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          assert isinstance(d.get('notices'), list) and d.get('updated')
+          d['notices'] = [{'title': str(n['title'])[:200], 'listed_at': str(n['listed_at'])} for n in d['notices']][:100]
+          json.dump(d, open('data/upbit_delist.json', 'w'), ensure_ascii=False, indent=1)
+          print('notices stored:', len(d['notices']))
+          "
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/upbit_delist.json
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "Upbit delisting notices from the phone"
+          for i in 1 2 3; do git pull -q --rebase && git push -q && exit 0; sleep 5; done
+          exit 1
