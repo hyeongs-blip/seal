@@ -24,20 +24,33 @@ jobs:
                   print(f"[{label}] HTTP {e.code} {body[:200]}")
               except Exception as e:
                   print(f"[{label}] ERR {type(e).__name__} {str(e)[:100]}")
-          UPA = "https://api-manager.upbit.com/api/v1/announcements?os=web&page=1&per_page=20&category=trade"
-          for h in ("sg-api-manager","id-api-manager","th-api-manager","api-manager"):
-              get(h, f"https://{h}.upbit.com/api/v1/announcements?os=web&page=1&per_page=20&category=trade")
-          get("api.upbit market", "https://api.upbit.com/v1/market/all?isDetails=true")
-          get("upbit sg notice", "https://sg.upbit.com/service_center/notice")
-          get("upbit support", "https://upbit.com/service_center/notice?id=1")
-          get("bithumb notice", "https://feed.bithumb.com/notice")
-          get("bithumb api", "https://api.bithumb.com/v1/market/all?isDetails=true")
-          BC = "https://www.binance.com/bapi/composite/v1/public/cms/article/catalog/list/query?catalogId=161&pageNo=1&pageSize=15"
+          H = {"User-Agent": UA, "clienttype": "web", "lang": "en"}
+          def J(url):
+              return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=H), timeout=20))
+          B = "https://www.binance.com/bapi/composite/v1/public/cms/article/"
+          for ps in (1, 2):
+              try:
+                  d = J(B + f"catalog/list/query?catalogId=161&pageNo={ps}&pageSize=20")
+                  print("[page]", ps, "total", d["data"].get("total"), "n", len(d["data"]["articles"]), "first", d["data"]["articles"][0]["title"][:80])
+              except Exception as e:
+                  print("[page]", ps, "ERR", e)
+          for code in ("b4015154ce33445ebf7b98d1bc12c072", "c30e6891afa54651ba950f8af144f861"):
+              try:
+                  d = J(B + "detail/query?articleCode=" + code)
+                  x = d["data"]
+                  print("[detail]", {k: (str(v)[:80]) for k, v in x.items() if k not in ("body",)})
+              except Exception as e:
+                  print("[detail] ERR", e)
+          for u in ("list/query?type=1&catalogId=161&pageNo=1&pageSize=10", "list/query?catalogId=161&pageNo=1&pageSize=10", "list/query?type=1&pageNo=1&pageSize=10"):
+              try:
+                  d = J(B + u)
+                  print("[list]", u, "ok", str(d)[:300])
+              except Exception as e:
+                  print("[list]", u, "ERR", e)
           try:
-              d = json.load(urllib.request.urlopen(urllib.request.Request(BC, headers={"User-Agent": UA, "clienttype": "web", "lang": "en"}), timeout=20))
-              for a in d["data"]["articles"][:15]:
-                  print("[binance art]", a.get("id"), a.get("code"), a.get("releaseDate"), (a.get("title") or "")[:110])
-              print("[binance keys]", list(d["data"]["articles"][0].keys()), "total", d["data"].get("total"))
+              d = J(B + "catalog/list/query?catalogId=161&pageNo=1&pageSize=20")
+              for a in d["data"]["articles"][:6]:
+                  print("[full]", json.dumps(a, ensure_ascii=False)[:400])
           except Exception as e:
-              print("[binance art] ERR", e)
+              print("ERR", e)
           PY
