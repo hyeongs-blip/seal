@@ -1,12 +1,12 @@
 name: upbit-notices
-# Upbit refuses GitHub's servers (HTTP 403), so the phone (in Korea) reads Upbit's trade notices and sends the delisting ones here.
+# Upbit and Bithumb refuse GitHub's servers, so the phone (in Korea) reads their notices (seal/phone/notices.py) and sends the delisting ones here.
 # This workflow only stores them in data/upbit_delist.json; the daily perp report reads that file from the public repo.
 # Started by the phone script (run_intraday.sh) through the same token as the intraday trigger.
 on:
   workflow_dispatch:
     inputs:
       data:
-        description: "JSON from the phone: {updated, notices:[{title, listed_at}]}"
+        description: "JSON from the phone: {updated, notices:[Upbit ...], bithumb:[...]} (each item {title, listed_at})"
         required: true
 permissions:
   contents: write
@@ -24,14 +24,23 @@ jobs:
           DATA: ${{ inputs.data }}
         run: |
           mkdir -p data
-          printf '%s' "$DATA" | python3 -c "
-          import json, sys
-          d = json.load(sys.stdin)
-          assert isinstance(d.get('notices'), list) and d.get('updated')
-          d['notices'] = [{'title': str(n['title'])[:200], 'listed_at': str(n['listed_at'])} for n in d['notices']][:100]
-          json.dump(d, open('data/upbit_delist.json', 'w'), ensure_ascii=False, indent=1)
-          print('notices stored:', len(d['notices']))
-          "
+          printf '%s' "$DATA" > /tmp/in.json
+          python3 - <<'PY'
+          import json, os
+          new = json.load(open('/tmp/in.json'))
+          assert new.get('updated') and ('notices' in new or 'bithumb' in new)
+          try:
+              old = json.load(open('data/upbit_delist.json'))
+          except Exception:
+              old = {}
+          clean = lambda L: [{'title': str(n['title'])[:200], 'listed_at': str(n['listed_at'])} for n in L][:100]
+          if 'notices' in new:                      # Upbit
+              old['notices'] = clean(new['notices']); old['updated'] = new['updated']
+          if 'bithumb' in new:                      # Bithumb
+              old['bithumb'] = clean(new['bithumb']); old['bithumb_updated'] = new['updated']
+          json.dump(old, open('data/upbit_delist.json', 'w'), ensure_ascii=False, indent=1)
+          print('stored: Upbit', len(old.get('notices', [])), 'Bithumb', len(old.get('bithumb', [])))
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/upbit_delist.json
