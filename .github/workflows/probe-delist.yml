@@ -24,17 +24,20 @@ jobs:
                   print(f"[{label}] HTTP {e.code} {body[:200]}")
               except Exception as e:
                   print(f"[{label}] ERR {type(e).__name__} {str(e)[:100]}")
-          UP = "https://api-manager.upbit.com/api/v1/announcements?os=web&page=1&per_page=20&category=trade"
-          get("upbit plain", UP)
-          get("upbit ko headers", UP, {"Accept-Language": "ko-KR,ko;q=0.9", "Origin": "https://upbit.com", "Referer": "https://upbit.com/service_center/notice"})
-          get("upbit notices", "https://api-manager.upbit.com/api/v1/notices?page=1&per_page=20", {"Accept-Language": "ko-KR,ko;q=0.9", "Origin": "https://upbit.com", "Referer": "https://upbit.com/"})
-          get("upbit html", "https://upbit.com/service_center/notice", {"Accept": "text/html", "Accept-Language": "ko-KR,ko;q=0.9"})
-          get("upbit info", "https://api-manager.upbit.com/api/v1/announcements?os=web&page=1&per_page=20&category=all", {"Accept-Language": "ko-KR", "Referer": "https://upbit.com/"})
-          B = "https://www.binance.com/bapi/composite/v1/public/cms/article/list/query"
-          get("binance now", B + "?type=1&catalogId=161&pageNo=1&pageSize=30")
-          get("binance headers", B + "?type=1&catalogId=161&pageNo=1&pageSize=30", {"clienttype": "web", "lang": "en", "Accept-Language": "en-US,en;q=0.9", "Referer": "https://www.binance.com/en/support/announcement"})
-          get("binance catalog", "https://www.binance.com/bapi/composite/v1/public/cms/article/catalog/list/query?catalogId=161&pageNo=1&pageSize=30", {"clienttype": "web", "lang": "en"})
-          get("binance apex", "https://www.binance.com/bapi/apex/v1/public/apex/cms/article/list/query?type=1&catalogId=161&pageNo=1&pageSize=30", {"clienttype": "web", "lang": "en"})
-          get("binance html", "https://www.binance.com/en/support/announcement/delisting?c=161&navId=161", {"Accept": "text/html", "Accept-Language": "en-US,en;q=0.9"})
-          get("binance.com ip", "https://www.binance.com/bapi/composite/v1/public/cms/article/list/query?type=1&catalogId=48&pageNo=1&pageSize=5")
+          UPA = "https://api-manager.upbit.com/api/v1/announcements?os=web&page=1&per_page=20&category=trade"
+          for h in ("sg-api-manager","id-api-manager","th-api-manager","api-manager"):
+              get(h, f"https://{h}.upbit.com/api/v1/announcements?os=web&page=1&per_page=20&category=trade")
+          get("api.upbit market", "https://api.upbit.com/v1/market/all?isDetails=true")
+          get("upbit sg notice", "https://sg.upbit.com/service_center/notice")
+          get("upbit support", "https://upbit.com/service_center/notice?id=1")
+          get("bithumb notice", "https://feed.bithumb.com/notice")
+          get("bithumb api", "https://api.bithumb.com/v1/market/all?isDetails=true")
+          BC = "https://www.binance.com/bapi/composite/v1/public/cms/article/catalog/list/query?catalogId=161&pageNo=1&pageSize=15"
+          try:
+              d = json.load(urllib.request.urlopen(urllib.request.Request(BC, headers={"User-Agent": UA, "clienttype": "web", "lang": "en"}), timeout=20))
+              for a in d["data"]["articles"][:15]:
+                  print("[binance art]", a.get("id"), a.get("code"), a.get("releaseDate"), (a.get("title") or "")[:110])
+              print("[binance keys]", list(d["data"]["articles"][0].keys()), "total", d["data"].get("total"))
+          except Exception as e:
+              print("[binance art] ERR", e)
           PY
