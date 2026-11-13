@@ -52,7 +52,7 @@ env:
 jobs:
   hivemind:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     permissions:
       contents: read          # this repo is only read; the private repo is written with the PRIVATE_PAT token
     steps:
