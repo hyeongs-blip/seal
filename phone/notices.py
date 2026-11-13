@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Runs on the phone (Termux, Korean IP), started by run_intraday.sh every hour: reads Upbit's and Bithumb's notices, keeps the delisting ones
-(거래지원 종료 / 상장폐지) of the last 30 days, and sends them to the 'upbit-notices' workflow, which stores them in data/upbit_delist.json
+(거래지원 종료 / 상장폐지) of the last 60 days (Upbit announces about a month ahead), and sends them to the 'upbit-notices' workflow, which stores them in data/upbit_delist.json
 for the daily perp report (GitHub's servers are refused by both exchanges). Sent when something changed, and at least every 6 hours.
 Every run that cannot read a source writes one line to the trigger log; the file is fetched fresh from the public repo each hour, so it can be fixed without touching the phone."""
 import datetime as dt
@@ -16,7 +16,7 @@ LOG, STATE = os.environ["LOGF"], os.environ["STATE"]
 KST = dt.timezone(dt.timedelta(hours=9))
 UA = "Mozilla/5.0 (Linux; Android 14; SM-S918N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
 DELIST = re.compile(r"거래지원\s*종료|상장\s*폐지|delist|trading support (?:end|termination)", re.I)
-DAYS = 30
+DAYS = 60
 
 
 def log(m):
@@ -102,7 +102,7 @@ def upbit(st):
     for v in tries:
         pp, cat, hd = v
         items, ok = [], True
-        for page in range(1, 9):
+        for page in range(1, 13):
             q = f"?os=web&page={page}&per_page={pp}" + (f"&category={cat}" if cat else "")
             try:
                 d = json.loads(get(base + q, full if hd == "full" else plain))
