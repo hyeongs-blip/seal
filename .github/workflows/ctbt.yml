@@ -78,7 +78,9 @@ jobs:
           mkdir -p out
           python ct_backtest.py
       - name: Send to Telegram
-        run: python -c "$TG_PY" out/ct_backtest.txt out/ct_backtest_trades.csv
+        run: |
+          python -c "$TG_PY" out/ct_backtest.txt out/ct_backtest_trades.csv
       - name: Send a failure notice to Telegram
         if: failure()
-        run: python -c "$TG_PY" "ct back-test FAILED. Run page: $RUN_URL"
+        run: |
+          python -c "$TG_PY" "ct back-test FAILED. Run page: $RUN_URL"
