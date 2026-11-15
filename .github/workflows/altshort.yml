@@ -1,7 +1,7 @@
 name: altshort
 
 # Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo (same pattern as ranker.yml).
-# Bot2 idea, step 1: point-in-time backtest of "short the persistent underperformers, long SOL / ETH / LINK" + a check of your coin list. Run by hand.
+# Bot2 idea: point-in-time backtest of "short the steady underperformers, long SOL / ETH / LINK" (SL levels, selection criteria, random-picks test, selloff weeks) + a check of your coin list. Run by hand.
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
         type: string
         default: ""
       min_down:
-        description: "Weeks (of 8) below the majors basket (empty = 7)"
+        description: "Weeks (of 8) below the majors basket (empty = 6)"
         type: string
         default: ""
       n_max:
@@ -19,7 +19,11 @@ on:
         type: string
         default: ""
       liq_min:
-        description: "Binance 30-day median daily USD turnover that counts as liquid (empty = 2000000)"
+        description: "Binance 30-day median daily USD turnover that counts as liquid (empty = 500000)"
+        type: string
+        default: ""
+      sl:
+        description: "Stop loss used in the comparisons, e.g. 0.30 = a short is closed 30% above its entry (empty = 0.30)"
         type: string
         default: ""
       coins:
@@ -63,6 +67,7 @@ jobs:
           ALT_MIN_DOWN: ${{ inputs.min_down }}
           ALT_N_MAX: ${{ inputs.n_max }}
           ALT_LIQ_MIN: ${{ inputs.liq_min }}
+          ALT_SL: ${{ inputs.sl }}
           ALT_LIST: ${{ inputs.coins }}
       - name: Save the log
         if: always()
