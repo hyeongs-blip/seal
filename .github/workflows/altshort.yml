@@ -23,7 +23,7 @@ on:
         type: string
         default: ""
       sl:
-        description: "Stop loss used in the comparisons, e.g. 0.30 = a short is closed 30% above its entry (empty = 0.30)"
+        description: "Stop loss used in the comparisons, e.g. 0.30 = a short is closed 30% above its entry (empty = 0.60)"
         type: string
         default: ""
       coins:
