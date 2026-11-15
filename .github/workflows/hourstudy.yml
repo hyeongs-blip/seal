@@ -15,6 +15,9 @@ on:
       hot:
         description: "Hot = up this much over the previous 24 h (0.10 = +10%)"
         default: "0.10"
+      exclude:
+        description: "Coins to leave out in a second set of tables, comma separated (leave-one-out check)"
+        default: ""
 
 concurrency:
   group: hourstudy
@@ -83,6 +86,7 @@ jobs:
           DAYS: ${{ github.event.inputs.days || '180' }}
           TOPN: ${{ github.event.inputs.topn || '40' }}
           HOT: ${{ github.event.inputs.hot || '0.10' }}
+          EXCLUDE: ${{ github.event.inputs.exclude || '' }}
           OUT_DIR: out
         run: |
           mkdir -p out
