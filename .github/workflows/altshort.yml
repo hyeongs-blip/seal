@@ -1,0 +1,76 @@
+name: altshort
+
+# Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo (same pattern as ranker.yml).
+# Bot2 idea, step 1: point-in-time backtest of "short the persistent underperformers, long SOL / ETH / LINK" + a check of your coin list. Run by hand.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_rel:
+        description: "Never more than this better than the majors basket in any single week (empty = 0.10)"
+        type: string
+        default: ""
+      min_down:
+        description: "Weeks (of 8) below the majors basket (empty = 7)"
+        type: string
+        default: ""
+      n_max:
+        description: "Most shorts held (empty = 20)"
+        type: string
+        default: ""
+      liq_min:
+        description: "Binance 30-day median daily USD turnover that counts as liquid (empty = 2000000)"
+        type: string
+        default: ""
+      coins:
+        description: "Your coin list, comma separated (empty = the 19 in altshort_bt.py)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: altshort
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy requests openpyxl matplotlib scipy
+      - name: Run the backtest (the log is kept in the private repo, not printed here)
+        run: |
+          mkdir -p data/altshort
+          log=data/altshort/altshort_last_run.log
+          set +e
+          python altshort_bt.py > "$log" 2>&1
+          code=$?
+          echo "altshort_bt.py finished with exit code $code. Full log: $log in the private repo."
+          exit $code
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ALT_MAX_REL: ${{ inputs.max_rel }}
+          ALT_MIN_DOWN: ${{ inputs.min_down }}
+          ALT_N_MAX: ${{ inputs.n_max }}
+          ALT_LIQ_MIN: ${{ inputs.liq_min }}
+          ALT_LIST: ${{ inputs.coins }}
+      - name: Save the log
+        if: always()
+        run: |
+          git config user.name "ranking-bot"
+          git config user.email "ranking-bot@users.noreply.github.com"
+          git add -A data/altshort || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Update altshort log"
+            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+          fi
