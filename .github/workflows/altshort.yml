@@ -30,6 +30,10 @@ on:
         description: "Your coin list, comma separated (empty = the 19 in altshort_bt.py)"
         type: string
         default: ""
+      script:
+        description: "Which script to run: altshort_bt.py (selection / SL tests, default) or altshort_hold.py (weekly reselect vs daily swaps vs no swaps)"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -54,11 +58,13 @@ jobs:
       - name: Run the backtest (the log is kept in the private repo, not printed here)
         run: |
           mkdir -p rk_lab/altshort
-          log=rk_lab/altshort/altshort_last_run.log
+          script="${ALT_SCRIPT:-altshort_bt.py}"
+          name="${script%.py}"; [ "$name" = "altshort_bt" ] && name="altshort"
+          log="rk_lab/altshort/${name}_last_run.log"
           set +e
-          python altshort_bt.py > "$log" 2>&1
+          python "$script" > "$log" 2>&1
           code=$?
-          echo "altshort_bt.py finished with exit code $code. Full log: $log in the private repo."
+          echo "$script finished with exit code $code. Full log: $log in the private repo."
           exit $code
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -69,6 +75,7 @@ jobs:
           ALT_LIQ_MIN: ${{ inputs.liq_min }}
           ALT_SL: ${{ inputs.sl }}
           ALT_LIST: ${{ inputs.coins }}
+          ALT_SCRIPT: ${{ inputs.script }}
       - name: Save the log
         if: always()
         run: |
