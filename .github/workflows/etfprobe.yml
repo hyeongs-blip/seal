@@ -1,0 +1,49 @@
+name: etf-probe
+# One-off check of where the daily ETF flow numbers can be read from (reachability + what the newest rows look like). Public data only; no secrets are printed.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: pip install requests
+      - name: Probe
+        env:
+          SOSO_API_KEY: ${{ secrets.SOSO_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os, re, json, requests
+          key = os.environ.get("SOSO_API_KEY", "").strip()
+          print("SOSO key set:", bool(key))
+          for sym in ("BTC", "ETH", "SOL"):
+              try:
+                  r = requests.get("https://openapi.sosovalue.com/openapi/v1/etfs/summary-history", params={"symbol": sym, "country_code": "US"}, headers={"x-soso-api-key": key}, timeout=40)
+                  b = r.json()
+                  rows = b.get("data", b) if isinstance(b, dict) else b
+                  if isinstance(rows, dict):
+                      rows = next((v for v in rows.values() if isinstance(v, list)), [])
+                  print("SoSoValue", sym, "HTTP", r.status_code, "code", b.get("code") if isinstance(b, dict) else "?", "rows", len(rows or []))
+                  for x in (rows or [])[:6]:
+                      print("   ", {k: x.get(k) for k in list(x)[:6]})
+                  if rows:
+                      print("    keys:", sorted(rows[0].keys()))
+              except Exception as e:
+                  print("SoSoValue", sym, "failed:", type(e).__name__, str(e)[:150])
+          H = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"}
+          for name, url in (("Farside BTC", "https://farside.co.uk/btc/"), ("Farside ETH", "https://farside.co.uk/eth/"), ("Farside SOL", "https://farside.co.uk/sol/"),
+                            ("Coinglass page", "https://www.coinglass.com/bitcoin-etf"), ("SoSoValue page", "https://sosovalue.com/assets/etf/us-btc-spot")):
+              try:
+                  r = requests.get(url, headers=H, timeout=40)
+                  t = r.text
+                  print(name, "HTTP", r.status_code, "bytes", len(t), "table" if "<table" in t else "no table", "cloudflare" if "cloudflare" in t.lower() and r.status_code != 200 else "")
+                  if "farside" in url and r.status_code == 200:
+                      rows = re.findall(r"<tr[^>]*>(.*?)</tr>", t, re.S)
+                      txt = [re.sub(r"<[^>]+>", "|", x) for x in rows]
+                      txt = [re.sub(r"\|+", "|", x).strip("|") for x in txt]
+                      print("    rows:", len(txt)); [print("    ", x[:160]) for x in txt[:3] + txt[-8:]]
+              except Exception as e:
+                  print(name, "failed:", type(e).__name__, str(e)[:150])
+          PY
