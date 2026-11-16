@@ -1,0 +1,85 @@
+name: ctlab
+
+# Tests of the Termux paper-trading script before it goes to the phone (run by hand): the mock-world tests, then a live read of the Keep hosts from this runner
+# compared with the report's own data, plus a try of the log-upload path. Reads the PRIVATE repo, writes only to its ct_lab/selftest folder, sends the result to Telegram.
+# The log shows counts only; host and coin names go into the file that is sent to Telegram.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ctlab
+  cancel-in-progress: false
+
+env:
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  TG_PY: |
+    import json, os, sys, uuid, urllib.error, urllib.parse, urllib.request
+    tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip(), os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not tok or not chat:
+        sys.exit("The TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secrets are empty in this repo")
+    text, files = sys.argv[1], [f for f in sys.argv[2:] if os.path.exists(f)]
+    if text.endswith(".txt") and os.path.exists(text):
+        text = open(text, encoding="utf-8").read()
+    def call(method, fields, path=None):
+        if path is None:
+            req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/{method}", data=urllib.parse.urlencode(fields).encode())
+        else:
+            b = uuid.uuid4().hex
+            body = b"".join(f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode() for k, v in fields.items())
+            body += (f'--{b}\r\nContent-Disposition: form-data; name="document"; filename="{os.path.basename(path)}"\r\n'
+                     f'Content-Type: application/octet-stream\r\n\r\n').encode() + open(path, "rb").read() + f"\r\n--{b}--\r\n".encode()
+            req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/{method}", data=body,
+                                         headers={"Content-Type": f"multipart/form-data; boundary={b}"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:            # never print the URL: it contains the bot token
+            sys.exit(f"Telegram refused {method}: HTTP {e.code} {e.read()[:200]!r}")
+    if files and len(text) <= 1000:                    # short text rides along as the file's caption
+        call("sendDocument", {"chat_id": chat, "caption": text}, files[0])
+        files = files[1:]
+    else:
+        for i in range(0, min(len(text), 12000), 4000):
+            call("sendMessage", {"chat_id": chat, "text": text[i:i + 4000], "disable_web_page_preview": "true"})
+    for f in files:
+        call("sendDocument", {"chat_id": chat}, f)
+    print("Sent to Telegram:", len(text), "characters,", len(sys.argv[2:]), "file(s)")
+
+jobs:
+  ctlab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests openpyxl
+      - name: Mock-world tests
+        run: |
+          python ct_lab/test_ctpaper.py 2>&1 | grep -E "OK|Traceback|Error|assert" | grep -v "not read\|boom\|upload failed" || true
+          python ct_lab/test_ctpaper.py > /dev/null 2>&1
+          python ct_lab/test_hourstudy.py 2>&1 | tail -1
+      - name: Live read of the hosts, compared with the report
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATE_PAT }}
+          OUT_DIR: out
+        run: |
+          mkdir -p out
+          python ct_lab/live_check.py
+      - name: Send to Telegram
+        if: always()
+        run: |
+          python -c "$TG_PY" out/live_check.txt
+      - name: Send a failure notice to Telegram
+        if: failure()
+        run: |
+          python -c "$TG_PY" "ctlab FAILED. Run page: $RUN_URL"
