@@ -33,17 +33,18 @@ jobs:
               except Exception as e:
                   print("SoSoValue", sym, "failed:", type(e).__name__, str(e)[:150])
           H = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"}
-          for name, url in (("Farside BTC", "https://farside.co.uk/btc/"), ("Farside ETH", "https://farside.co.uk/eth/"), ("Farside SOL", "https://farside.co.uk/sol/"),
-                            ("Coinglass page", "https://www.coinglass.com/bitcoin-etf"), ("SoSoValue page", "https://sosovalue.com/assets/etf/us-btc-spot")):
-              try:
-                  r = requests.get(url, headers=H, timeout=40)
-                  t = r.text
-                  print(name, "HTTP", r.status_code, "bytes", len(t), "table" if "<table" in t else "no table", "cloudflare" if "cloudflare" in t.lower() and r.status_code != 200 else "")
-                  if "farside" in url and r.status_code == 200:
-                      rows = re.findall(r"<tr[^>]*>(.*?)</tr>", t, re.S)
-                      txt = [re.sub(r"<[^>]+>", "|", x) for x in rows]
-                      txt = [re.sub(r"\|+", "|", x).strip("|") for x in txt]
-                      print("    rows:", len(txt)); [print("    ", x[:160]) for x in txt[:3] + txt[-8:]]
-              except Exception as e:
-                  print(name, "failed:", type(e).__name__, str(e)[:150])
-          PY
+          import html as _h
+          for sym in ("btc", "eth", "sol"):
+              r = requests.get(f"https://farside.co.uk/{sym}/", headers=H, timeout=40)
+              t = r.text
+              print("Farside", sym, r.status_code, len(t))
+              trs = re.findall(r"<tr[^>]*>(.*?)</tr>", t, re.S)
+              out = []
+              for tr in trs:
+                  cells = [re.sub(r"\s+", " ", _h.unescape(re.sub(r"<[^>]+>", "", c))).strip() for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, re.S)]
+                  out.append(cells)
+              print("  table rows:", len(out), " widths:", sorted({len(c) for c in out}))
+              for c in out[:3] + out[-7:]:
+                  print("   ", c)
+              # the other tables on the page
+              print("  <table count:", t.count("<table"))
