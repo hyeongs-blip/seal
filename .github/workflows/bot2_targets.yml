@@ -1,0 +1,50 @@
+name: bot2-targets
+
+# Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo.
+# Every day after the daily close (00:00 UTC) it writes rk_lab/bot2/targets.json (Rule F candidates + your core list) for the bot2 on the phone to read.
+# The file is only replaced when the data looks right; if the run fails, a Telegram message (Reportbox) says so and the old file simply goes stale (the bot must refuse a file older than ~2 days).
+
+on:
+  schedule:
+    - cron: "37 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bot2-targets
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy requests openpyxl matplotlib scipy
+      - name: Write the targets file
+        run: python bot2_targets.py
+      - name: Save the file in the private repo
+        run: |
+          git config user.name "ranking-bot"
+          git config user.email "ranking-bot@users.noreply.github.com"
+          git add -A rk_lab/bot2 || true
+          if ! git diff --cached --quiet; then
+            git commit -m "bot2 targets $(date -u +%F)"
+            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+          fi
+      - name: Tell me when it failed
+        if: failure()
+        run: |
+          curl -s -m 20 "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="bot2 targets file: the daily run FAILED (the old file goes stale). See the Actions tab of the public repo." > /dev/null || true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
