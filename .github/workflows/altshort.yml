@@ -53,8 +53,8 @@ jobs:
       - run: pip install pandas numpy requests openpyxl matplotlib scipy
       - name: Run the backtest (the log is kept in the private repo, not printed here)
         run: |
-          mkdir -p data/altshort
-          log=data/altshort/altshort_last_run.log
+          mkdir -p rk_lab/altshort
+          log=rk_lab/altshort/altshort_last_run.log
           set +e
           python altshort_bt.py > "$log" 2>&1
           code=$?
@@ -74,7 +74,7 @@ jobs:
         run: |
           git config user.name "ranking-bot"
           git config user.email "ranking-bot@users.noreply.github.com"
-          git add -A data/altshort || true
+          git add -A rk_lab/altshort || true
           if ! git diff --cached --quiet; then
             git commit -m "Update altshort log"
             for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
