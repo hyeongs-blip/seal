@@ -1,0 +1,55 @@
+name: poolsize
+
+# Lives in the PUBLIC repo; code and data are in the PRIVATE repo (same pattern as ranker.yml / altshort.yml).
+# Pool size test for bot1 (POOL_SIZE 10-100% of the largest list) split by IGNORE regime. Run by hand; re-run when more daily rankings have been saved.
+
+on:
+  workflow_dispatch:
+    inputs:
+      liq_min:
+        description: "Binance 7-day average daily USD turnover that counts as tradable on Bybit (empty = 800000)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: poolsize
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy requests openpyxl matplotlib scipy
+      - name: Run the test (the log is kept in the private repo, not printed here)
+        run: |
+          mkdir -p rk_lab/poolsize
+          set +e
+          python poolsize_bt.py > rk_lab/poolsize/poolsize_last_run.log 2>&1
+          code=$?
+          echo "poolsize_bt.py finished with exit code $code. Full log: rk_lab/poolsize/poolsize_last_run.log in the private repo."
+          exit $code
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          POOL_LIQ_MIN: ${{ inputs.liq_min }}
+      - name: Save the log
+        if: always()
+        run: |
+          git config user.name "ranking-bot"
+          git config user.email "ranking-bot@users.noreply.github.com"
+          git add -A rk_lab/poolsize || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Update poolsize log"
+            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+          fi
