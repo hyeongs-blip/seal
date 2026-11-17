@@ -68,6 +68,7 @@ jobs:
           python ct_lab/test_ctpaper.py 2>&1 | grep -E "OK|Traceback|Error|assert" | grep -v "not read\|boom\|upload failed" || true
           python ct_lab/test_ctpaper.py > /dev/null 2>&1
           python ct_lab/test_hourstudy.py 2>&1 | tail -1
+          python ct_lab/test_binance_positions.py 2>&1 | tail -2
       - name: Live read of the hosts, compared with the report
         env:
           GH_TOKEN: ${{ secrets.PRIVATE_PAT }}
