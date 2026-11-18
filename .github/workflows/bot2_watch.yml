@@ -1,0 +1,49 @@
+name: bot2-watch
+
+# Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo.
+# Every hour it reads rk_lab/bot2/current.txt (the shorts bot2 holds) and puts a coin on rk_lab/bot2/blacklist.txt when
+#   rule 1: OrangeX is top 7 AND another wild exchange is top 5 in its perpetual-volume ranking, or
+#   rule 2: the coin has an active RISK episode.
+# bot2 then closes that short within about an hour. Coin names only go to Telegram, never into this log.
+# Set the repository variable BOT2_WATCH_DRY=1 to test: nothing is written and Telegram says what it would do.
+
+on:
+  schedule:
+    - cron: "40 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "1 = dry run (write nothing)"
+        default: "0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bot2-watch
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - name: Check the blacklist rules
+        run: python3 bot2_watch.py
+        env:
+          BOT2_WATCH_DRY: ${{ github.event.inputs.dry || vars.BOT2_WATCH_DRY || '0' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Save the blacklist in the private repo
+        run: |
+          git config user.name "ranking-bot"
+          git config user.email "ranking-bot@users.noreply.github.com"
+          git add -A rk_lab/bot2/blacklist.txt rk_lab/bot2/watch_state.json || true
+          if ! git diff --cached --quiet; then
+            git commit -m "bot2 blacklist watch $(date -u +%F-%H)"
+            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+          fi
