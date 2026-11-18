@@ -1,6 +1,6 @@
 name: ctclose
 
-# Closing-protocol back-test (run by hand): close all at 30/50/70/100% of the peak hosts closed vs partial following, and a coin-specific protocol tuned on the earlier part of the data and judged on the later part
+# Closing-protocol back-test (run by hand): close all at 30/50/70/100% of the peak hosts closed vs partial following, with price baselines, and a luck-versus-skill screen for every host
 # (ct_close_bt.py). Reads the PRIVATE repo's saved host data, writes nothing back, sends the result to Telegram. The log shows no coin or host names; they go into the files that are sent to Telegram.
 
 on:
@@ -79,7 +79,7 @@ jobs:
           python ct_close_bt.py
       - name: Send to Telegram
         run: |
-          python -c "$TG_PY" out/ct_close_bt.txt out/ct_close_coins.csv
+          python -c "$TG_PY" out/ct_close_bt.txt out/ct_hosts_skill.csv
       - name: Send a failure notice to Telegram
         if: failure()
         run: |
