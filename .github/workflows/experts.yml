@@ -75,9 +75,9 @@ jobs:
         env:
           COINS: ${{ github.event.inputs.coins || 'WLD,ZEC,PEPE,XMR,ENA,FIL,BCH,PUMP,USELESS,MET,TAO,PENGU,NEAR,AAVE,DOT,ARB,DOGE,XRP' }}
         run: |
-          mkdir -p data/experts
+          mkdir -p data/hivemind/experts
           set +e
-          python hv_lab/coin_experts.py "$COINS" > data/experts/last_run.log 2>&1
+          python hv_lab/coin_experts.py "$COINS" > data/hivemind/experts/last_run.log 2>&1
           code=$?
           echo "coin_experts.py finished with exit code $code"
           exit $code
@@ -86,7 +86,7 @@ jobs:
           COINS: ${{ github.event.inputs.coins || 'WLD,ZEC,PEPE,XMR,ENA,FIL,BCH,PUMP,USELESS,MET,TAO,PENGU,NEAR,AAVE,DOT,ARB,DOGE,XRP' }}
         run: |
           set +e
-          python hv_lab/hivemind.py "$COINS" > data/experts/hivemind_last.log 2>&1
+          python hv_lab/hivemind.py "$COINS" > data/hivemind/experts/hivemind_last.log 2>&1
           code=$?
           echo "hivemind.py finished with exit code $code"
           exit $code
@@ -95,7 +95,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add -A data/experts 2>/dev/null || true
+          git add -A data/hivemind/experts 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Nothing new"
           else
@@ -109,4 +109,4 @@ jobs:
       - name: Send a failure notice to Telegram
         if: failure()
         run: |
-          python -c "$TG_PY" "$(printf 'experts scan FAILED. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/experts/hivemind_last.log data/experts/last_run.log 2>/dev/null || echo '(no log)')"
+          python -c "$TG_PY" "$(printf 'experts scan FAILED. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/hivemind/experts/hivemind_last.log data/hivemind/experts/last_run.log 2>/dev/null || echo '(no log)')"

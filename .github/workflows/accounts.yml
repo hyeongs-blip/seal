@@ -63,9 +63,9 @@ jobs:
       - run: pip install requests openpyxl
       - name: Rate the hosts (the log is kept in the private repo, not printed here)
         run: |
-          mkdir -p data/accounts
+          mkdir -p data/hivemind/accounts
           set +e
-          python hv_lab/account_experts.py > data/accounts/last_run.log 2>&1
+          python hv_lab/account_experts.py > data/hivemind/accounts/last_run.log 2>&1
           code=$?
           echo "account_experts.py finished with exit code $code"
           exit $code
@@ -74,7 +74,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add -A data/accounts 2>/dev/null || true
+          git add -A data/hivemind/accounts 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Nothing new"
           else
@@ -86,4 +86,4 @@ jobs:
       - name: Send a failure notice to Telegram
         if: failure()
         run: |
-          python -c "$TG_PY" "$(printf 'account experts FAILED. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/accounts/last_run.log 2>/dev/null || echo '(no log)')"
+          python -c "$TG_PY" "$(printf 'account experts FAILED. Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/hivemind/accounts/last_run.log 2>/dev/null || echo '(no log)')"

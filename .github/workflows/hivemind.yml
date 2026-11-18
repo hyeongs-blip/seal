@@ -1,6 +1,6 @@
 name: hivemind
 
-# Hourly: the hivemind check for every coin with an expert model (data/experts/*_model.json): Telegram only when a call opens or
+# Hourly: the hivemind check for every coin with an expert model (data/hivemind/experts/*_model.json): Telegram only when a call opens or
 # closes. Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo.
 
 on:
@@ -72,10 +72,10 @@ jobs:
       - run: pip install requests openpyxl
       - name: Hivemind check (the log is kept in the private repo, not printed here)
         run: |
-          mkdir -p data/experts
-          if ! ls data/experts/*_model.json >/dev/null 2>&1; then echo "No expert models yet"; exit 0; fi
+          mkdir -p data/hivemind/experts
+          if ! ls data/hivemind/experts/*_model.json >/dev/null 2>&1; then echo "No expert models yet"; exit 0; fi
           set +e
-          HV_SOURCE="${{ github.event_name == 'schedule' && 'schedule' || github.event.inputs.source }}" python hv_lab/hivemind.py --live > data/experts/live_last.log 2>&1
+          HV_SOURCE="${{ github.event_name == 'schedule' && 'schedule' || github.event.inputs.source }}" python hv_lab/hivemind.py --live > data/hivemind/experts/live_last.log 2>&1
           code=$?
           echo "hivemind.py --live finished with exit code $code"
           exit $code
@@ -84,7 +84,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add data/experts/live_state.json data/experts/live_scores.csv data/experts/live_last.log 2>/dev/null || true
+          git add data/hivemind/experts/live_state.json data/hivemind/experts/live_scores.csv data/hivemind/experts/live_last.log 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Nothing new"
           else
@@ -94,17 +94,17 @@ jobs:
       - name: Send calls to Telegram (only when a call opens or closes)
         run: |
           if [ -f hivemind_live.txt ]; then python -c "$TG_PY" hivemind_live.txt; else echo "No news"; fi
-          if [ -f data/experts/live_failing ]; then
-            git rm -q data/experts/live_failing && git commit -q -m "hivemind recovered" \
+          if [ -f data/hivemind/experts/live_failing ]; then
+            git rm -q data/hivemind/experts/live_failing && git commit -q -m "hivemind recovered" \
               && for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done
             python -c "$TG_PY" "hivemind check is working again."
           fi
       - name: Send a failure notice to Telegram (once, not every hour)
         if: failure()
         run: |
-          if [ ! -f data/experts/live_failing ]; then
-            python -c "$TG_PY" "$(printf 'hivemind check FAILED (no more notices until it works again). Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/experts/live_last.log 2>/dev/null || echo '(no log)')"
-            date -u > data/experts/live_failing
-            git add data/experts/live_failing && git commit -q -m "hivemind failing" \
+          if [ ! -f data/hivemind/experts/live_failing ]; then
+            python -c "$TG_PY" "$(printf 'hivemind check FAILED (no more notices until it works again). Run page: %s\n\nLast lines of the log:\n' "$RUN_URL"; tail -n 30 data/hivemind/experts/live_last.log 2>/dev/null || echo '(no log)')"
+            date -u > data/hivemind/experts/live_failing
+            git add data/hivemind/experts/live_failing && git commit -q -m "hivemind failing" \
               && for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done
           fi
