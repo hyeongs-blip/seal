@@ -31,6 +31,8 @@ jobs:
       - run: pip install pandas numpy requests openpyxl matplotlib scipy
       - name: Write the targets file
         run: python rk_lab/bot2/bot2_targets.py
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"     # the script imports altshort_bt from the same folder, whose .pyc would otherwise be committed with the targets file
       - name: Save the file in the private repo
         run: |
           git config user.name "ranking-bot"
