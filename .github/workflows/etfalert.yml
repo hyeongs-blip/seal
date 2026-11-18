@@ -1,6 +1,6 @@
 name: etf-alert
 
-# Lives in the PUBLIC repo (free Actions minutes); code and state are in the PRIVATE repo (checked out with PRIVATE_PAT).
+# Lives in the PUBLIC repo (free Actions minutes); code and state are in the PRIVATE repo, otter/hv_lab/old_tests (checked out with PRIVATE_PAT).
 # Telegram message (bot 3) with the last 5 daily US spot-ETF flows (BTC and ETH) right after the newest day's number is published (etf_alert.py).
 # Polls every 10 minutes from 05:00 to 14:00 KST, Tuesday to Saturday (the US close is 05:00-06:00 KST). Quick when there is nothing new.
 
@@ -36,7 +36,7 @@ jobs:
           python-version: "3.12"
       - run: pip install requests
       - name: Poll (the log shows only status lines)
-        run: python etf_alert.py
+        run: python hv_lab/old_tests/etf_alert.py
         env:
           SOSO_API_KEY: ${{ secrets.SOSO_API_KEY }}
           TELEGRAM_BOT_TOKEN_3: ${{ secrets.TELEGRAM_BOT_TOKEN_3 }}
@@ -47,7 +47,7 @@ jobs:
         run: |
           git config user.name "etf-bot"
           git config user.email "etf-bot@users.noreply.github.com"
-          git add -f ct_lab/etf/etf_alert_state.json 2>/dev/null || true
+          git add -f hv_lab/old_tests/etf/etf_alert_state.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "ETF alert state"
             for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done

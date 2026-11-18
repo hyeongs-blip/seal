@@ -3,9 +3,15 @@ name: hot coins hourly
 # Hot-coin hivemind paper test (otter/hv_lab/hot): hourly expert reading on hot coins, paper calls to Telegram.
 
 on:
-  workflow_dispatch:
-  schedule:
+  workflow_dispatch:          # "Run workflow" button in the Actions tab = a manual run, always runs; the phone sends source=phone
+    inputs:
+      source:
+        description: "phone = started by the Termux hourly trigger (skipped if a check already ran this clock hour); empty = manual run"
+        required: false
+        default: ""
+  schedule:                   # fallback only: the phone starts it at :02; these are skipped when a check already ran this clock hour
     - cron: "41 * * * *"
+    - cron: "11 * * * *"
 
 concurrency:
   group: hot
@@ -66,7 +72,7 @@ jobs:
       - name: Run (log kept in the private repo)
         run: |
           mkdir -p hv_lab/hot/state
-          python hv_lab/hot/hot_live.py --hourly > hv_lab/hot/state/last__hourly.log 2>&1 || { tail -n 25 hv_lab/hot/state/last__hourly.log > hot.err; exit 1; }
+          HV_SOURCE="${{ github.event_name == 'schedule' && 'schedule' || github.event.inputs.source }}" python hv_lab/hot/hot_live.py --hourly > hv_lab/hot/state/last__hourly.log 2>&1 || { tail -n 25 hv_lab/hot/state/last__hourly.log > hot.err; exit 1; }
       - name: Send to Telegram
         run: |
           if [ -f hot_live.txt ]; then python -c "$TG_PY" hot_live.txt; fi

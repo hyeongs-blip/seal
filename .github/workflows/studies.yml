@@ -81,7 +81,7 @@ jobs:
         run: |
           mkdir -p data/studies
           set +e
-          python etf_gap_study.py \
+          python hv_lab/old_tests/etf_gap_study.py \
             --soso-base "${{ vars.SOSO_BASE || 'https://openapi.sosovalue.com/openapi/v1' }}" \
             --out etf_gap_study.xlsx > data/studies/etf_last_run.log 2>&1
           code=$?
@@ -93,7 +93,7 @@ jobs:
           HYPERTRACKER_TOKEN: ${{ secrets.HYPERTRACKER_TOKEN }}
         run: |
           mkdir -p data/studies
-          python whale_scanner.py --backfill 28 90 > data/studies/whale_backfill.log 2>&1
+          python hv_lab/old_tests/whale_scanner.py --backfill 28 90 > data/studies/whale_backfill.log 2>&1
           code=$?
           echo "whale_scanner.py --backfill finished with exit code $code"
           exit $code

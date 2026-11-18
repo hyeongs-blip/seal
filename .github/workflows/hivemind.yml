@@ -4,9 +4,15 @@ name: hivemind
 # closes. Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo.
 
 on:
-  workflow_dispatch:          # "Run workflow" button in the Actions tab
-  schedule:
-    - cron: "23 * * * *"      # every hour at :23; GitHub sometimes starts it late or skips one, which is fine for swings
+  workflow_dispatch:          # "Run workflow" button in the Actions tab = a manual run, always runs; the phone sends source=phone
+    inputs:
+      source:
+        description: "phone = started by the Termux hourly trigger (skipped if a check already ran this clock hour); empty = manual run"
+        required: false
+        default: ""
+  schedule:                   # fallback only: the phone starts it at :02; these are skipped when a check already ran this clock hour
+    - cron: "23 * * * *"
+    - cron: "53 * * * *"
 
 concurrency:
   group: hivemind
@@ -69,7 +75,7 @@ jobs:
           mkdir -p data/experts
           if ! ls data/experts/*_model.json >/dev/null 2>&1; then echo "No expert models yet"; exit 0; fi
           set +e
-          python hv_lab/hivemind.py --live > data/experts/live_last.log 2>&1
+          HV_SOURCE="${{ github.event_name == 'schedule' && 'schedule' || github.event.inputs.source }}" python hv_lab/hivemind.py --live > data/experts/live_last.log 2>&1
           code=$?
           echo "hivemind.py --live finished with exit code $code"
           exit $code
