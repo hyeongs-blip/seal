@@ -65,7 +65,7 @@ jobs:
         run: |
           mkdir -p data/accounts
           set +e
-          python account_experts.py > data/accounts/last_run.log 2>&1
+          python hv_lab/account_experts.py > data/accounts/last_run.log 2>&1
           code=$?
           echo "account_experts.py finished with exit code $code"
           exit $code

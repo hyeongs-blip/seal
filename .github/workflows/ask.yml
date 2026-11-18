@@ -69,7 +69,7 @@ jobs:
       - name: Read the experts (the answer is kept in the private repo, not printed here)
         env:
           COINS: ${{ github.event.inputs.coins }}
-        run: python ask_experts.py "$COINS" > ask.log 2>&1 || { tail -n 20 ask.log > ask.err; exit 1; }
+        run: python hv_lab/ask_experts.py "$COINS" > ask.log 2>&1 || { tail -n 20 ask.log > ask.err; exit 1; }
       - name: Send to Telegram
         run: python -c "$TG_PY" ask_experts.txt
       - name: Save the answer to the repo

@@ -1,13 +1,13 @@
-name: ct_lab prices
+name: hv_lab prices
 
-# Test folder: fetches hourly prices for back-tests in otter/ct_lab (Gate futures is reachable from here, not from Claude's sandbox).
+# Fetches hourly prices for the hivemind back-tests into otter/hv_lab/backtest/prices (Gate futures is reachable from here, not from Claude's sandbox).
 
 on:
   workflow_dispatch:
     inputs:
       lists:
-        description: "Coin list files in ct_lab, space separated"
-        default: "ct_lab/coins_hot.txt ct_lab/coins_stocks.txt"
+        description: "Coin list files, space separated"
+        default: "hv_lab/backtest/coins_hot.txt hv_lab/backtest/coins_stocks.txt"
       start_ms:
         description: "Start, ms"
         required: true
@@ -16,7 +16,7 @@ on:
         required: true
 
 concurrency:
-  group: ct_lab
+  group: hv_prices
   cancel-in-progress: false
 
 jobs:
@@ -40,12 +40,12 @@ jobs:
           A: ${{ github.event.inputs.start_ms }}
           B: ${{ github.event.inputs.end_ms }}
         run: |
-          mkdir -p ct_lab/prices
-          for f in $LISTS; do python ct_lab/fetch_prices.py "$f" "$A" "$B" >> ct_lab/prices/_fetch.log 2>&1; done
+          mkdir -p hv_lab/backtest/prices
+          for f in $LISTS; do python hv_lab/fetch_prices.py "$f" "$A" "$B" >> hv_lab/backtest/prices/_fetch.log 2>&1; done
       - name: Save to the repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add ct_lab/prices
-          git commit -q -m "ct_lab prices $(date -u +%F_%H%M)" || exit 0
+          git add hv_lab/backtest/prices
+          git commit -q -m "hv_lab prices $(date -u +%F_%H%M)" || exit 0
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done

@@ -1,6 +1,6 @@
 name: hot coins hourly
 
-# Hot-coin hivemind paper test (otter/ct_lab): hourly expert reading on hot coins, paper calls to Telegram.
+# Hot-coin hivemind paper test (otter/hv_lab/hot): hourly expert reading on hot coins, paper calls to Telegram.
 
 on:
   workflow_dispatch:
@@ -65,8 +65,8 @@ jobs:
       - run: pip install requests openpyxl
       - name: Run (log kept in the private repo)
         run: |
-          mkdir -p ct_lab/hot
-          python ct_lab/hot_live.py --hourly > ct_lab/hot/last__hourly.log 2>&1 || { tail -n 25 ct_lab/hot/last__hourly.log > hot.err; exit 1; }
+          mkdir -p hv_lab/hot/state
+          python hv_lab/hot/hot_live.py --hourly > hv_lab/hot/state/last__hourly.log 2>&1 || { tail -n 25 hv_lab/hot/state/last__hourly.log > hot.err; exit 1; }
       - name: Send to Telegram
         run: |
           if [ -f hot_live.txt ]; then python -c "$TG_PY" hot_live.txt; fi
@@ -75,7 +75,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add ct_lab/hot
+          git add hv_lab/hot/state
           git commit -q -m "hot --hourly $(date -u +%F_%H%M)" || exit 0
           for i in 1 2 3 4; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 7; done
       - name: Send a failure notice to Telegram

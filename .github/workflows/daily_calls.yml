@@ -61,7 +61,7 @@ jobs:
           python-version: "3.12"
       - run: pip install requests openpyxl
       - name: Build the summary
-        run: python daily_calls.py > daily_calls.log 2>&1 || { tail -n 30 daily_calls.log > daily_calls.err; exit 1; }
+        run: python hv_lab/daily_calls.py > daily_calls.log 2>&1 || { tail -n 30 daily_calls.log > daily_calls.err; exit 1; }
       - name: Send to Telegram
         run: python -c "$TG_PY" daily_calls.txt
       - name: Send a failure notice to Telegram
