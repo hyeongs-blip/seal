@@ -1,0 +1,27 @@
+name: upbit-premium
+
+# Upbit refuses GitHub's servers, so the phone (in Korea) watches the Korea premium of Upbit's top 20 coins (otter/ct_lab/relay/upbit_premium.py)
+# and starts this workflow with the message text when a coin reaches the premium limit. This workflow only forwards the text to Telegram (bot 3, the coin bot).
+on:
+  workflow_dispatch:
+    inputs:
+      text:
+        description: "Message text from the phone"
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: upbit-premium
+  cancel-in-progress: false
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Send to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN_3 }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TEXT: ${{ inputs.text }}
+        run: |
+          curl -s -m 20 "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" --data-urlencode text="${TEXT:0:3800}" | grep -q '"ok":true' || { echo "telegram send failed"; exit 1; }
