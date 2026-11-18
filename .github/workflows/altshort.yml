@@ -59,7 +59,9 @@ jobs:
         run: |
           mkdir -p rk_lab/altshort
           script="${ALT_SCRIPT:-altshort_bt.py}"
-          name="${script%.py}"; [ "$name" = "altshort_bt" ] && name="altshort"
+          [ -f "rk_lab/bot2/$(basename "$script")" ] && script="rk_lab/bot2/$(basename "$script")"   # the scripts live in rk_lab/bot2/
+          script_name="$(basename "$script")"
+          name="${script_name%.py}"; [ "$name" = "altshort_bt" ] && name="altshort"
           log="rk_lab/altshort/${name}_last_run.log"
           set +e
           python "$script" > "$log" 2>&1

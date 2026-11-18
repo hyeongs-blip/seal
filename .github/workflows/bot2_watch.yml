@@ -33,7 +33,7 @@ jobs:
           repository: ${{ secrets.PRIVATE_REPO }}
           token: ${{ secrets.PRIVATE_PAT }}
       - name: Check the blacklist rules
-        run: python3 bot2_watch.py
+        run: python3 rk_lab/bot2/bot2_watch.py
         env:
           BOT2_WATCH_DRY: ${{ github.event.inputs.dry || vars.BOT2_WATCH_DRY || '0' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
