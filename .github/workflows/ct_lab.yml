@@ -1,0 +1,51 @@
+name: ct_lab prices
+
+# Test folder: fetches hourly prices for back-tests in otter/ct_lab (Gate futures is reachable from here, not from Claude's sandbox).
+
+on:
+  workflow_dispatch:
+    inputs:
+      lists:
+        description: "Coin list files in ct_lab, space separated"
+        default: "ct_lab/coins_hot.txt ct_lab/coins_stocks.txt"
+      start_ms:
+        description: "Start, ms"
+        required: true
+      end_ms:
+        description: "End, ms"
+        required: true
+
+concurrency:
+  group: ct_lab
+  cancel-in-progress: false
+
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Fetch prices (log kept in the private repo)
+        env:
+          LISTS: ${{ github.event.inputs.lists }}
+          A: ${{ github.event.inputs.start_ms }}
+          B: ${{ github.event.inputs.end_ms }}
+        run: |
+          mkdir -p ct_lab/prices
+          for f in $LISTS; do python ct_lab/fetch_prices.py "$f" "$A" "$B" >> ct_lab/prices/_fetch.log 2>&1; done
+      - name: Save to the repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add ct_lab/prices
+          git commit -q -m "ct_lab prices $(date -u +%F_%H%M)" || exit 0
+          for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done
