@@ -1,7 +1,7 @@
 name: etf-alert
 
 # Lives in the PUBLIC repo (free Actions minutes); code and state are in the PRIVATE repo (checked out with PRIVATE_PAT).
-# Telegram message (bot 3) with the last 5 daily US spot-ETF flows (BTC, ETH, SOL) right after the newest day's number is published (etf_alert.py).
+# Telegram message (bot 3) with the last 5 daily US spot-ETF flows (BTC and ETH) right after the newest day's number is published (etf_alert.py).
 # Polls every 10 minutes from 05:00 to 14:00 KST, Tuesday to Saturday (the US close is 05:00-06:00 KST). Quick when there is nothing new.
 
 on:
