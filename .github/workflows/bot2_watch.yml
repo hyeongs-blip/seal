@@ -4,7 +4,7 @@ name: bot2-watch
 # Every hour it reads rk_lab/bot2/current.txt (the shorts bot2 holds) and puts a coin on rk_lab/bot2/blacklist.txt when
 #   rule 1: OrangeX is top 7 AND another wild exchange is top 5 in its perpetual-volume ranking, or
 #   rule 2: the coin has an active RISK episode.
-# bot2 then closes that short within about an hour. Coin names only go to Telegram, never into this log.
+# bot2 then closes that short within about an hour. It also removes the lines it wrote itself once no rule fires any more (lines you wrote are never touched). Coin names only go to Telegram, never into this log.
 # Set the repository variable BOT2_WATCH_DRY=1 to test: nothing is written and Telegram says what it would do.
 
 on:
@@ -14,6 +14,9 @@ on:
     inputs:
       dry:
         description: "1 = dry run (write nothing)"
+        default: "0"
+      seed:
+        description: "1 = also check every liquid bot2 candidate and every coin with an active RISK episode (one-off, blacklists them before bot2 buys)"
         default: "0"
 
 permissions:
@@ -36,6 +39,7 @@ jobs:
         run: python3 rk_lab/bot2/bot2_watch.py
         env:
           BOT2_WATCH_DRY: ${{ github.event.inputs.dry || vars.BOT2_WATCH_DRY || '0' }}
+          BOT2_WATCH_SEED: ${{ github.event.inputs.seed || '0' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       - name: Save the blacklist in the private repo
