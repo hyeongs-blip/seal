@@ -1,0 +1,63 @@
+name: stockstudy
+
+# Lives in the PUBLIC repo (free Actions minutes); code and data are in the PRIVATE repo (same pattern as altshort.yml).
+# Feasibility study for a stock version of bot2 ("bot2b"): steady underperformers among the stocks Binance lists as perpetuals. Run by hand; the log is saved in the private repo (sb_lab/).
+
+on:
+  workflow_dispatch:
+    inputs:
+      shorts:
+        description: "Number of shorts (empty = 12)"
+        type: string
+        default: ""
+      sl:
+        description: "Stop loss, e.g. 0.30 = a short is closed 30% above its entry (empty = 0.30)"
+        type: string
+        default: ""
+      min_vol:
+        description: "Binance 24h USD volume a stock perpetual needs to be in the list (empty = 5000000)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stockstudy
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy requests
+      - name: Run the study (the log is kept in the private repo, not printed here)
+        run: |
+          set +e
+          python sb_lab/stock_study.py > sb_lab/stock_study_last_run.log 2>&1
+          code=$?
+          echo "finished with exit code $code. Full log: sb_lab/stock_study_last_run.log in the private repo."
+          exit $code
+        env:
+          SB_N: ${{ inputs.shorts }}
+          SB_SL: ${{ inputs.sl }}
+          SB_MIN_VOL: ${{ inputs.min_vol }}
+          PYTHONDONTWRITEBYTECODE: "1"
+      - name: Save the log
+        if: always()
+        run: |
+          git config user.name "ranking-bot"
+          git config user.email "ranking-bot@users.noreply.github.com"
+          git add -A sb_lab/*.log || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Update stock study log"
+            for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+          fi
