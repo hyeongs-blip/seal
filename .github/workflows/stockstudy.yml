@@ -14,6 +14,10 @@ on:
         description: "Stop loss, e.g. 0.30 = a short is closed 30% above its entry (empty = 0.30)"
         type: string
         default: ""
+      script:
+        description: "Which study: stock_study.py (bot2 rule, default) or stock_pairs.py (bot1 pair scheme)"
+        type: string
+        default: ""
       min_vol:
         description: "Binance 24h USD volume a stock perpetual needs to be in the list (empty = 5000000)"
         type: string
@@ -42,11 +46,14 @@ jobs:
       - name: Run the study (the log is kept in the private repo, not printed here)
         run: |
           set +e
-          python sb_lab/stock_study.py > sb_lab/stock_study_last_run.log 2>&1
+          script="${SB_SCRIPT:-stock_study.py}"
+          name="$(basename "$script" .py)"
+          python "sb_lab/$(basename "$script")" > "sb_lab/${name}_last_run.log" 2>&1
           code=$?
-          echo "finished with exit code $code. Full log: sb_lab/stock_study_last_run.log in the private repo."
+          echo "finished with exit code $code. Full log: sb_lab/${name}_last_run.log in the private repo."
           exit $code
         env:
+          SB_SCRIPT: ${{ inputs.script }}
           SB_N: ${{ inputs.shorts }}
           SB_SL: ${{ inputs.sl }}
           SB_MIN_VOL: ${{ inputs.min_vol }}
