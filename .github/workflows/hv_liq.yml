@@ -1,9 +1,13 @@
-name: hv_lab liquidations
+name: hv_lab data
 
-# One-off: BTC long/short liquidations per exchange from Coinalyze into otter/hv_lab/backtest/liq (for the weekend study).
+# One-off data pulls for hv_lab back-tests: what = liq (Coinalyze BTC liquidations) or etf (Farside BTC/ETH ETF flow history).
 
 on:
   workflow_dispatch:
+    inputs:
+      what:
+        description: "liq or etf"
+        default: "liq"
 
 jobs:
   fetch:
@@ -23,14 +27,15 @@ jobs:
       - name: Fetch (log kept in the private repo)
         env:
           COINALYZE_API_KEY: ${{ secrets.COINALYZE_API_KEY }}
+          WHAT: ${{ github.event.inputs.what }}
         run: |
-          mkdir -p hv_lab/backtest/liq
-          python hv_lab/backtest/liq_fetch.py > hv_lab/backtest/liq/fetch.log 2>&1
+          mkdir -p hv_lab/backtest/liq hv_lab/backtest/etf
+          if [ "$WHAT" = "etf" ]; then python hv_lab/backtest/etf_hist.py > hv_lab/backtest/etf/fetch.log 2>&1; else python hv_lab/backtest/liq_fetch.py > hv_lab/backtest/liq/fetch.log 2>&1; fi
       - name: Save to the repo
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add hv_lab/backtest/liq
-          git commit -q -m "hv_lab liquidations $(date -u +%F_%H%M)" || exit 0
+          git add hv_lab/backtest/liq hv_lab/backtest/etf
+          git commit -q -m "hv_lab data $(date -u +%F_%H%M)" || exit 0
           for i in 1 2 3 4; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 7; done
