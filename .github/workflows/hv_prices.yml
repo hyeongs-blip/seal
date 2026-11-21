@@ -14,6 +14,12 @@ on:
       end_ms:
         description: "End, ms"
         required: true
+      interval:
+        description: "Candle size: 1h, 5m, 15m ..."
+        default: "1h"
+      outdir:
+        description: "Folder under hv_lab/backtest for the files"
+        default: "prices"
 
 concurrency:
   group: hv_prices
@@ -37,15 +43,19 @@ jobs:
       - name: Fetch prices (log kept in the private repo)
         env:
           LISTS: ${{ github.event.inputs.lists }}
+          INTERVAL: ${{ github.event.inputs.interval || '1h' }}
+          OUT_DIR: ${{ github.event.inputs.outdir || 'prices' }}
           A: ${{ github.event.inputs.start_ms }}
           B: ${{ github.event.inputs.end_ms }}
         run: |
-          mkdir -p hv_lab/backtest/prices
-          for f in $LISTS; do python hv_lab/fetch_prices.py "$f" "$A" "$B" >> hv_lab/backtest/prices/_fetch.log 2>&1; done
+          mkdir -p hv_lab/backtest/$OUT_DIR
+          for f in $LISTS; do python hv_lab/fetch_prices.py "$f" "$A" "$B" >> hv_lab/backtest/$OUT_DIR/_fetch.log 2>&1; done
       - name: Save to the repo
+        env:
+          OUT_DIR: ${{ github.event.inputs.outdir || 'prices' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add hv_lab/backtest/prices
+          git add hv_lab/backtest/$OUT_DIR
           git commit -q -m "hv_lab prices $(date -u +%F_%H%M)" || exit 0
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; git rebase --abort 2>/dev/null; sleep 5; done
