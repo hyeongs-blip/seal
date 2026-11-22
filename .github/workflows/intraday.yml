@@ -56,6 +56,7 @@ jobs:
           CMC_API_KEY_10: ${{ secrets.CMC_API_KEY_10 }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}              # reads your positions chat (positions_chat.py)
           TELEGRAM_BOT_TOKEN_3: ${{ secrets.TELEGRAM_BOT_TOKEN_3 }}          # the driver-flag alert messages go out with this bot (intraday_alerts.py), never with TELEGRAM_BOT_TOKEN
+          TELEGRAM_BOT_TOKEN_4: ${{ secrets.TELEGRAM_BOT_TOKEN_4 }}          # bot 4 sends the driver-flag alerts when it is set (else bot 3)
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_POSITIONS_BOT_TOKEN: ${{ secrets.TELEGRAM_POSITIONS_BOT_TOKEN }}    # optional: a second bot just for the positions chat (empty = TELEGRAM_BOT_TOKEN)
           TELEGRAM_POSITIONS_CHAT: ${{ secrets.TELEGRAM_POSITIONS_CHAT }}    # optional: id of the positions chat (empty = any chat except the report chat)
