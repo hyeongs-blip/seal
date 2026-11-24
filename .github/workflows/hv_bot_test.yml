@@ -1,5 +1,5 @@
 name: hivemind bot test
-# Mock test of the phone bot (ct_lab/relay/hv_bot.py) + smoke test on Binance DEMO futures. Results go to otter hv_lab/bot/test_result.txt.
+# Mock test of the phone bot (ct_lab/relay/hv_bot.py). Binance demo refuses GitHub's servers (HTTP 451): the exchange test is `hvbot test` on the phone. Results go to otter hv_lab/bot/test_result.txt.
 on:
   workflow_dispatch:
 jobs:
@@ -15,12 +15,6 @@ jobs:
           python-version: "3.12"
       - name: Mock test (fake exchange)
         run: python hv_lab/bot/test_hv_bot.py > hv_lab/bot/mock_result.txt 2>&1; s=$?; tail -1 hv_lab/bot/mock_result.txt; exit $s
-      - name: Smoke test on Binance demo
-        if: always()
-        env:
-          BINANCE_DEMO_KEY: ${{ secrets.BINANCE_DEMO_KEY }}
-          BINANCE_DEMO_SECRET: ${{ secrets.BINANCE_DEMO_SECRET }}
-        run: python hv_lab/bot/smoke.py
       - name: Save the results
         if: always()
         run: |
