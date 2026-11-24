@@ -84,7 +84,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add data/hivemind/experts/live_state.json data/hivemind/experts/live_scores.csv data/hivemind/experts/live_last.log 2>/dev/null || true
+          for f in live_state.json live_scores.csv live_last.log bot_calls.json live_skipped.csv; do [ -f data/hivemind/experts/$f ] && git add data/hivemind/experts/$f; done; true
           if git diff --cached --quiet; then
             echo "Nothing new"
           else

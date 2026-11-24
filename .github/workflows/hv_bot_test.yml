@@ -1,0 +1,30 @@
+name: hivemind bot test
+# Mock test of the phone bot (ct_lab/relay/hv_bot.py) + smoke test on Binance DEMO futures. Results go to otter hv_lab/bot/test_result.txt.
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: hyeongs-blip/otter
+          token: ${{ secrets.PRIVATE_PAT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Mock test (fake exchange)
+        run: python hv_lab/bot/test_hv_bot.py > hv_lab/bot/mock_result.txt 2>&1; s=$?; tail -1 hv_lab/bot/mock_result.txt; exit $s
+      - name: Smoke test on Binance demo
+        if: always()
+        env:
+          BINANCE_DEMO_KEY: ${{ secrets.BINANCE_DEMO_KEY }}
+          BINANCE_DEMO_SECRET: ${{ secrets.BINANCE_DEMO_SECRET }}
+        run: python hv_lab/bot/smoke.py
+      - name: Save the results
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          for f in test_result.txt mock_result.txt; do [ -f hv_lab/bot/$f ] && git add hv_lab/bot/$f; done; true
+          git diff --cached --quiet || { git commit -q -m "hv bot test"; for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done; }
