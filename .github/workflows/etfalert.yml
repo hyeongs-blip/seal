@@ -40,7 +40,7 @@ jobs:
         env:
           SOSO_API_KEY: ${{ secrets.SOSO_API_KEY }}
           HYPERTRACKER_TOKEN: ${{ secrets.HYPERTRACKER_TOKEN }}
-          TELEGRAM_BOT_TOKEN_3: ${{ secrets.TELEGRAM_BOT_TOKEN_3 }}
+          TELEGRAM_BOT_TOKEN_3: ${{ secrets.TELEGRAM_BOT_TOKEN_4 }}   # sent by bot 4 since 11-25 (the script reads this name)
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ETF_TEST: ${{ github.event.inputs.test == '1' && '1' || '' }}
       - name: Save the state
